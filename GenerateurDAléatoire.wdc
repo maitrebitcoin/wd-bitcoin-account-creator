@@ -1,0 +1,233 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : GenerateurDAléatoire
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1ce0fe5606c9f384
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      GenerateurDAléatoire est une Classe
+      	implémente IsourceDEntropie
+      	
+      	// octets aléatoires disponibles
+      	bufferRandom  est un buffer
+      	// gestion de la partie qui ne fait pas encore 1 octet
+      	rBitEntropieEnAttente est un réel // de 0 a 7.9999
+      	bufEnAttente	 	  est un buffer
+      
+      
+      FIN
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 2080942673279775620
+     type_code : 27
+     code : |1-
+      PROCEDURE Constructeur( )
+      RAZ()
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 2080942673279841156
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+      
+     type : 655360
+   -
+     name : RAZ
+     procedure_id : 2080942673279906692
+     type_code : 12
+     code : |1+
+      procédure RAZ()
+      bufferRandom =""
+      rBitEntropieEnAttente=0
+      bufEnAttente=0
+     type : 458752
+   -
+     name : AjouteDeplacementSouris
+     procedure_id : 2080942673279972228
+     type_code : 12
+     code : |1+
+      // appelé si la souris se déplace
+      Procédure AjouteDeplacementSouris( x,y )
+      
+      // +8 bits d'entropie entre les déplacement x/y de la souris + le timing du déplacement
+      sBuf est un buffer = ""+x+""+y+""+ HeureSys()
+      :_AjouteEntropie( sBuf, 6 )
+     type : 458752
+   -
+     name : AjouteFrappeClavier
+     procedure_id : 2080942673280037764
+     type_code : 12
+     code : |1+
+      procédure AjouteFrappeClavier( nTouche )
+      
+      // +8 bits d'entropie entre le n° de la touche + le timing de la frappe
+      sBuf est un buffer = ""+nTouche+""+ HeureSys()
+      :_AjouteEntropie( sBuf, 4 )
+     type : 458752
+   -
+     name : AjouteHasardGénérateurSystème
+     procedure_id : 2143392877073381343
+     type_code : 12
+     code : |1-
+      // ajouter <(nbBit>- bits de hasard provenant du générateur système
+      procédure AjouteHasardGénérateurSystème(nbBit entier)
+      dbgAssertion(nbBit>=8)
+      dbgAssertion(nbBit modulo 8 = 0)
+      
+      sBuf est un buffer = HasardCryptoBuffer(nbBit/8)
+      :_AjouteEntropie( sBuf, nbBit )
+     type : 458752
+   -
+     name : AjouteHasardQuantiqueHttp
+     procedure_id : 2143391687367359647
+     type_code : 12
+     code : |1+
+      // ajouter 256 bits de hasard provenant du site web <qrng.anu.edu.au>
+      procédure AjouteHasardQuantiqueHttp(nbBit entier ) : booléen
+      dbgAssertion(nbBit>=8)
+      dbgAssertion(nbBit modulo 8 = 0)
+      
+      QUAND EXCEPTION
+      	renvoyer faux // pb de requete http
+      FIN
+      si pas InternetConnecté() ALORS
+      	RENVOYER Faux // pas de requete http possible
+      FIN
+      
+      nNbOctet est un entier = nbBit/8
+      requêteHasard est un httpRequête
+      requêteHasard..URL = "https://qrng.anu.edu.au/API/jsonI.php?length=1&type=hex16&size=" + nNbOctet
+      httpReponse est un httpRéponse = HTTPEnvoie(requêteHasard)
+      SI ErreurDétectée ALORS
+      	RENVOYER Faux  // echec
+      fin
+      // ex de :
+      // {"type":"string","length":1,"size":16,"data":["2e69b56babd55938cd900fdd423ae2be"],"success":true}
+      sJon est chaine = httpReponse..Contenu
+      varJason est variant =	JSONVersVariant(sJon)
+      SI ErreurDétectée ALORS
+      	Erreur(ErreurInfo(errComplet))
+      	RENVOYER Faux 	
+      FIN
+      // conversion en buffer	
+      sBuf est un buffer = HexaVersBuffer(varJason.data[1])
+      dbgAssertion(taille(sBuf) = nNbOctet )
+      // ajout de 256 bits d'entropie
+      :_AjouteEntropie( sBuf, nbBit )
+      
+      renvoyer vrai
+      
+     type : 458752
+   -
+     name : nGetNbBitEntropie
+     procedure_id : 2080946813634390340
+     type_code : 12
+     code : |1+
+      procédure nGetNbBitEntropie() : entier
+      
+      renvoyer taille(:bufferRandom) * 8 + :rBitEntropieEnAttente
+      
+     type : 458752
+   -
+     name : _AjouteEntropie
+     procedure_id : 2080942673280103300
+     type_code : 12
+     code : |1+
+      // rajouter de l'aléa.
+      // <nbBitEntropie> : nombre de bits d'entropie minimum dans <bufAvecEntropie>
+      procédure _AjouteEntropie( bufAvecEntropie buffer, local nbBitEntropie réél )
+      
+      	procédure interne _AjoutNOctet( bufSrc buffer, nbOctetEntropie entier )
+      		si nbOctetEntropie=0 alors
+      			retour
+      		FIN
+      		// on hash le buffer pour mélange tous les bits et ne garde que la partie qui représente la quantité vraiment aléatoire
+      		dbgAssertion(nbOctetEntropie<=64)	
+      		sMix est un buffer = HashChaîne(HA_SHA_512, bufSrc)
+      		:bufferRandom  += Gauche(sMix, nbOctetEntropie )
+      	fin
+      
+      // taille a garder
+      nbOctetOK    est un entier = nbBitEntropie / 8.0
+      rbitsRestant est un réél   = nbBitEntropie - (nbOctetOK * 8)
+      // si il y une parte qui ne tiens pas dans un octet
+      si rbitsRestant <> 0 ALORS
+      	// on rejoute la source au buffer en attente
+      	bufEnAttente       += bufAvecEntropie
+      	rBitEntropieEnAttente += rbitsRestant
+      	// si on a maintenant un octet complet
+      	si rBitEntropieEnAttente>8.0 alors
+      		// +1 octet d'entropie dispo
+      		_AjoutNOctet(bufEnAttente,1)
+      		rBitEntropieEnAttente-=8.0
+      		// si plus d'entropie dispo
+      		si rBitEntropieEnAttente=0 ALORS
+      			bufEnAttente=""
+      		sinon
+      			// on compacte le buffer. conserver l'entropie mais évite de prendre trop de place en RAM
+      			bufEnAttente =  HashChaîne(HA_SHA_256, bufEnAttente)
+      		FIN
+      		
+      	fin
+      FIN
+      
+      // Ajout de au buffer
+      _AjoutNOctet(bufAvecEntropie,nbOctetOK)
+      
+      
+     type : 458752
+   -
+     name : sGetBufferAléaloire
+     procedure_id : 2080942673280168836
+     type_code : 12
+     code : |1+
+      // -- Implementation de ISourceDEntropie est une Interface
+      // récupération de <nTailleEnOctet> octets aléatoires
+      PROCÉDURE sGetBufferAléaloire( nTailleEnOctet est un entier ) : Buffer
+      dbgAssertion(nTailleEnOctet>0)
+      dbgAssertion( nGetNbBitEntropie()   >= nTailleEnOctet*8, "pas assez d'entropie" )
+      dbgAssertion( taille(:bufferRandom) >= nTailleEnOctet, "buffer trop petit" )
+      dbgAssertion( nTailleEnOctet modulo 8 = 0 )
+      si nGetNbBitEntropie()  < nTailleEnOctet*8 ALORS
+      	renvoyer "" // pas assez d'entropie disponible 
+      FIN
+      
+      // on accumule tous l(entropie disponible dans un buffer de la taille demandée
+      résultat est un buffer =  gauche( bufferRandom, nTailleEnOctet)
+      // enlever l'entropie utilisée
+      :bufferRandom = Milieu(bufferRandom,nTailleEnOctet+1)
+      // tant qu'il en reste
+      tantque :bufferRandom<>""
+      	// mixer l'entropie
+      	xorBuffer( résultat,  gauche( bufferRandom, nTailleEnOctet) )
+      	// enlever l'entropie utilisée
+      	:bufferRandom = Milieu(bufferRandom,nTailleEnOctet+1)
+      FIN
+      
+      
+      renvoyer résultat
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1ce008cd061cd3a1
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

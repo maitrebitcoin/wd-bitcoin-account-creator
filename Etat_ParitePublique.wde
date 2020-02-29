@@ -1,0 +1,89 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : Etat_ParitePublique
+ major_version : 25
+ minor_version : 0
+ type : 3
+ description : ""
+ subtype : 0
+report :
+ identifier : 0x5d1c3843007b8958
+ internal_properties : BQAAAAUAAAC9mT/swOo9C00gjLlKrR/P1ayNc3td4OeioVdZAIyjnNyLokFmLOB0aFMIOVmerEOdsdWjFM9iV/JJ7T5uZvu0cDbKIGbF98fzGjHvj3ArecVOpJ244A8R2V2LI8h1qFEd4Yrh5weGxHSa/6cYiFgGfnR4doGAAxo97duKzLf639XXQfgcOEI3U77LE7WV90g22ch2c3A0hXLJj6a9tMtc0wm+07mKo2ACVXg2mA8DfK78uKIIzje0DxySZIG8VipnP9o9I9PQIBe/hZO4SuwgQ4k26c0/GO/YSgCTFSzRXxZzT9+2KE2CnonoonwkJQUUZgYtp8DNFHCbHn+jLAxSVNSVEJW9B1lvij6I1jx7igXkb1diBD7xf0dIq2zQQXEP0luOti19HWF96C1XPrst4Rku9TaD20flL/yCsDk68jmshVWCEsOR3CONgV8ZLc2bXqgCy+/z4GvYxO7VBIdV1WIZ7VNi/jT/dpMh0P1eHewtDTQicZBxs6QLxbAQhjrXiTZW1bGu6ZVGQL03ZZOgeuWlgm7fEMUEWLzr5WRgeOIkqXkKGe3tYBspQzgIVOR0Gmlz9FWaSE7J/4rqIieDndXtX/L8kyCLNqnkFLexuuikuKzEnfTmfu+lZmzCSAgDJo8dHmma8QyfY8M5rt1IE/7X7+jodeXq5I+yd3HS8zyxBNzhpm52ZI+a7crmfcKSrIxwl6dylcsFdZVjNz/yO+aY7E43a6NirIJJMYTAtpOaxFFt++JcQHDLnFicxYREylThnC4mP8rRW57w+4z7AXiFi7COZXoD0QXm+ar4JSDzAwnH6itvnYoGgDf3ESv1nPqU1Jk8rOVcrZ/kYnp0YwEdsWw96XjnPe/E2ckIrTxaZyFiQQQU23xdtlyNf//wMZB051IP8aDwFUUS6xYarwRuy5Fu6mfwkQq5NbcFyNANNlLNnMlmQeAJ5Yh92LqNAXMIWFlVAGgamzTMJWBcREbRWcdZgxoDxYBbqEPyYdbwKp29whaMja0UMLN4gFFJ0K4H6Xd90CvM2MdLJ+GFUft/KmRP8CvNVyWLxaGKK7qAJSt2zP2SFYjrAMfJT4Z0k/A0gnuLcEyAzawY6jQn1pzrJoyGUhnybiWgVTuTuYSS8DD1+2r1G4ceMGPGQiUWyc885u3mdjTf1GsQjeaGlM/YVZ4vmqbisq9CuLvPdmoIJY4oVChw8m8NvzEaHvI4kDal9vW+60zTVGt1EPXqOQA+HL61dWhcq1HNplJmofwjQSmTyOUpg4URbczVJvhM9LGiQvceqa7i5ekoxofVHjNuEURxcNalu8uFowp97oSDzgzwraqYq0n1V1ZzqSlyddDixRoZ/3Za8GomoKBYHe6EuZTKo9sZO3XqqTGaGKK22LSPtIgJ62HkTca6IokKJwM1qw0U2cSevtSBXmrHaIGFYsOc1mwfqsBaKZ9I+3VAf7w6YlomiLasJzzVvyGZydmx2GRo6UW6vNnnSiCfbrUQu19ujLJ7szufh8+EfE5nzGQdkU6X/f+Pb8RgHmLwJ9EPyg8IwH6hkQtgYuy7nPTCtplsrHA0FeuKf5bRTzxVl34kPAlWBWGfd3bZk/Nka+456+yL20ADNvHn/8Cq4/Ksb9JreTHT+xS7HtsmC/ZX7VXwTpxbbtVUOsk44r3s7mzOpiBlRVmYWlqUoeYG2MS/78g/1ir6KBK9PS0FBX6S0scm0JNGyc1dEr9qFZtV5cz1qTsbD4YPY+nPqXIkjvckNu/u4yTcZjtyL7U2lBKjc/5FXRMtNIUp9Ekzj8KoolLa4l+Zy/5Xhv+qz0jBjPkGizeT58pD7IYq1WEWVMRK4S52viP3CMOEWYyEXyVrvG2F2z0w/oNn4C87M76Vfl5NmR4PULcBBxsd/ZUQixxVsnB0Z2qZ12GnmA62qyedKx7/1oWeQYfmZSAvMhKgr1Ke
+ languages :
+  - fr-FR
+  - en-GB
+  - es-ES
+  - ar-SA
+ blocks :
+  -
+    name : CORPS
+    identifier : 0x5d1c384300898958
+    internal_properties : BQAAAAUAAAD10Foo8FfyyPXmHhlhIzULDm0EPgDrAEaRsj75oXIYL0jjcEgp8tujuJj46dvjmfzDsJUADLLkGhoxIqQsS2/Y7Tv1Oj7nmZdFYRxsVr/oNe0X1G4TUAWC2bfpAerQ+aZPXq0ca+/x1UCd2R9Ks11ki6wuCdmN56M2iiyOVazAfDkrq2KpU4x5REMmRXJuYwWL8Dtz/WEPZ9/hqwaBACZyefD0YqrsyLkU6AuzX7yuFxUg4vNLAS1S1Kp3p0HBhnpt3Qhq/j3MgXExHE5o+whvPYIFiEsTksGiN95GnLigXgSR6xIG95BGF11L8s6PAaKh0+UuvcnupDYKqwkJqDHh/de0a4d5pRpIEI5No8+iB5zaIytPYpbtOcXGtfm/KFc6A0L/ggVqB8/0oaG6KQupsn/g5fzWnl4JHWlR/zU2Z67GmELyoblLWwfxJ2JczA5rUbPRdL2UKIRoTb/EOPp2/I38N55B1/1PIyF0ubxSXFRdSmATC3n5zT5H598ZOkOmle94ao0IACe3uQn0J8CyQrH9V1x3n4/uVQ8BlKfy3idMRppM7fHJqYS0kLU/XXWM0I21XQBtKiQZmb8x0HVn7lOvIsnq/R32HvltJaweh6ib3k+NYgjScyFNj3+XqD0ArVMDW8b2GFMgSLsWTSNqUWjV/TFfN9NwzV2uzAwSIrr5hatEM5yvBSMdHOVchopU/TrGL5b2ew==
+    controls :
+     -
+       name : CODE_BARRE_ADRESSEPUBLIQUE
+       identifier : 0x5d1c3857008fd593
+       internal_properties : BQAAAAUAAACbOqnAhufTGKTHdmF4SL0EvX6TOMT09GHvgh4UWifpd5XYIzf/3Z6SnJo/DDUmdrcLxwmfu34XeaqZ60boR6oK8uCR6X3ElRTm7Fas654gaEqbSpmLF89L4TLlB5uxSufr89+ov0HsoR1ePGkVp6Las3e2EfsMjBDwLbR5Yo8nL+TGkceW7pn3zpt5tCHSSTHPI2JfU9PvzFM20V/80utFYnGQgQl6Sg+dUp03TXUWN9sS2TRBG3jUF3hM4EnaTCNU0ih/uCrXWCpdqlORWdXmxAHBcnsyB6Uycmfon6L1ztD6L1XHZ8gWf4S7ay4RzWJKC5Pd/jctbC6j1nqxJOETctvy6SNyi7Uc2EtVBREzir/pQhsCm40HZyZrNBdhOgL/m9MRGlG4mhsSsPkU73ys+eLNAVaz2p1PbKTWS6o2T5ztdmjROE6ENixBiBPYRsYlg7x7Tdy3fKOXIPsDBugfq4sAbB7cQMfeFkGOvmkftc9v9BEdzHGsH+hj/mMUYBYeutbNuNbbrXuJWNKrVPgyirCaCYAoQ+SWtISH+5pDKutla6/2HtUTMV/QabGC3iyfjk4iTI6Y2ETLYsTWuNYyvCK50pc4o53Usd1hQY54kpedEPz4ZLxGI5JhQCpZUMIHCmYaAhTsT7OlNku9tJs1Qq539nN7Hv0N0QlMhRxfgOvnxhzgY2eBayLIN/ZBroa0uTiKenhheWUYFG8u+tQSd+tsnczMNhYfEDAkgWEUoHug/ao8bdAUILIZdVgaypC5Hus7eAprZZlnv+X8RpyFvbCM4nszl+pH9kNLVBy6PJNJimSxyEWFl4Sql7VXyE+dKvoDXTd1jHP3QyhvlKQxPTnR4/v+mDg2y7kKmbc5tuF85v6yIzgtMJRyzW3/PFwPgRGy3dJ8+4/uypI4EiIAki3DyT9F/BWWxCvFOs9eyJhzGAVFUVKs4I6rE2MJPd6gtoBjKcjZBA31hF7hxnS+KkRzTTdPkN/nBSjfPs+PqnYIaRTTczUNQZ8JoS+VNq7XG/wakdxWdcQJrIwCbYKds/FYgF/PxZcqMPPNmVOBRW3Wt8cQKjBpQvvenrsdTBq+fVQP/h/t5FfAiNtH8chMLjNtd0+2vHxd8oFbKc5OmP3lpDhV18OJ2/Uc/zKUEAinmIixhQquugzM/0rkSDyInQ==
+       code_elements :
+        type_code : 29
+        p_codes : []
+     -
+       name : LIB_ADRESSE_PUBLIQUE
+       identifier : 0x5d1c388101037b78
+       internal_properties : BQAAAAUAAABD+a/a48Adqf99Ln+AOqbpW7DW63fcor5VwBVfcJ1XiFHzT/qZXHP6BOI5ATGnBNjlYxadyU1dT3dNefSHKYLDMhnxPiHzq4IMebCUpqSJRC87QZ8DwT6DrVb6sgiYB594HWlN61iWQL+j1QBAH3XsCtaiN3pDhLIWaZHQrcMuDb95NJ2ooMf6DwC7gauhSAKWapUwaa7oi+lYOrd05xG1AsOMrJv2UulKmBqyovATzDRB05EDGyFBS9v1RgJfmxz6i0ISewGU0CrWmBPkKCHxIj9pQWyG+xaXQzX6GGDaVCXWxrnzdR/WUN4k/6LmNvDXUvw50OBEuKfsT86MLNkXts331+uiA7t8Tqy4eUB4VMBuiqgRo1uG2d2yFKSJ39Sbtyk6qcjav5UP+pAXtuK226tQYqIR6i9pUAG6V6PMXbZx+rErBgmcm0C8BwaT8KDwganrRComVfzUshOkaDVeNolSCHnRlHpXCniIwblFbgi+StU2mBwQiequIGR44PIbKIw/Ky4QZT6RSAbwXf1lFx0hRidOe9Ey1b8xLEumvYf36vkZz7Jqc6czLBLskFTmrjNjBwPjH4Xy0PkMgZEeuwL1v6jaEsn83riouPgFcTgr2FaXgX9wmk3hdxPa3faIkJA/nf/uFXxdRUdZjE7xN40Fbe5y1tkmt9Gh25tZsoF7yLWfzE7msOhX4CfK6ssaclVcz1+Jnfh0+oj1vtn0Rxd8A0+Gerf0naPzv+iWk1/sZr9KNrPoZqOEZQNXbpRMvUYrczOMox+38N94LzUdSEBpU/d3n5oycmPDPd8qAyp2QMAPDz8jrMHfaqDaSe6Inh39uW7VJUnIOFNPXnYmIAf/aQFK1VMOswaKUL8ywWoxOGfA8mnZcOaccUipmr9DYXGWO9GxL854PjWKz7nBDrtaOdDu5U9AzsIIs6hppnH5yJuWhZg1jw+Okvjf6CBoq5K1vFdeTJT0cffGVzpveqdQf32CW/Fk2mdDPvWgrcNeEWfjy6v5y6fdpWiAOL2cqlOVeIB2E+wwhqfpU0d0pjPS48KXdGeItjP9Bbtsg1rQE93INDp5wsTWoDb9GN8HKUjXkG/ljfjx20JOhYV34kbL7uhZjAbH/KeX+IpgvubeoJFEqkpRIrTlitq3yB+Zx3g0BUhXLnnkV4e1uAxyUgY7HF8DMhzJcKjq22McmRjn8eVquRYrhkzNgg9a7A9f1AQqy6PIQciohea2D9EHkrAqYFC2GVrLDXN1CxG7gGNZMSvRb4QrqTeuh8Mnd1buuCJy2XBJsbsBQHUEhzpyXsrO6Hv+KQINj4vbmmhN9lKKKx6kdWPE+GCgvmOpMEzIS+jdyMpg8DYZL4AflbBryrVhS+pfzGM6NY2vVyj5L9AKpJ8F8bJjHbwJ+21PxgdML3vTktie3+dqWTdPMul0wETx2yXLHFG38qBMXUIhoKr8Bq0v1Y++Ug17jUJSHOVG6CUWfWgeNf19fuReXa0KSs2P5YgLGpMZhbnVp1h7nY6r6Y36aMt+34rDUOqzht8GbpRtWEDvXk2LdtaJ0b9OBkYQTtLhPKbupvoEWjQ7b8411WhGjPN4IHlVNUFX2yV7KSV5a46CA7n8MhqqrKfI+FpkFaWMJ7VH+BZDFMzCHpa5tNl+RrmG3ryG23LK4XYG8qZKK6e1hYBreQWL8ika9KBsyt/lfjiob6mtpFjKbyqKNbanIEW4SgPg9jEZS84=
+       code_elements :
+        type_code : 29
+        p_codes : []
+     -
+       name : LIB_NOM_COMPTE
+       identifier : 0x5d1d8abc0110b27d
+       internal_properties : BQAAAAUAAACcsD/NeLyU/sp/v55V3vwsSwIO63RIkMc7y8CqMh0kUdZeSRkABkFM4qECrFrmIJTjJ50o92yDkl0HCu8z8WGo652B3glVGvi7Skgncg3REy6DS2p/dJbDRB8qMWBJc7gOQxbcTf95lCEJiqK8bazXOp9PufrrZyHPFGhpk10Nz4j8x1hu8W8MIh3PgCF1gGnWX3qUl3B6k+fv3NwGTNM4Cv6hQUNFQUek0iqIgCswxO4xuNDQlC/V57R6Otxzq8B6WihU03aFJ32PNKBt5EqpenIu7jY6GEPYPCVDfESvqEj1OHKX2xXe2F5GSZjaBDKh337ZPGG3RqpLhQqWHKRK92pop119JrF3Rh4aSHfWchQ6rnwso0cmaCcVRyJey5jDjd6MJ0IrCNQxv1vDNmd5YX7OBfSNFi8lSIasjmJwuJbnBtdLIboH91h+984jD5kk3iYo6M6g1l7ntJl6JvusJMTfFjt03ATtB0Xk1cDtEnVsKTKBr7sk2rJsEmfg0plhjYjRAeU1xmioIdvBotMGA7Sp3+2RcF4FuRQn383NyhTCkQ+Ry8voON1RYA8X6gaEEOEvukE+JyS8QRmmsA03sgEaiTa1+qi19P2hCdlxqCl1MFoAUNWWrjAMmu4OSSVk7EPPDRmEVFEnWQ1ImtHF0Nj66rqVBM5Vc+dFmyp3fKqoT/GSFoPiRId6hVv9Y4ErczdWyHjePgCdiOcWC9FmDAh9d4xrM+CGqsvVnGyyNDXd67kZ10IMaT8gAp9yJQTxP1IylLPkfK66mydfcneXTX9L1FNKwMb1XuZlwICjH3tkSUdGMPLLbH14ftdFsFw2I683k5HvgyPL3PV/4Yc0mNIfEB056QX+51VBUkeZ9yYuj7IhV+B/De2Z0N2Yoxtnz/x0X8sKm3KOmxGK/OeMJl9YMdltcwh5bGmlOi0QmerhqUame729TItfoH9ZQ25ifwAooZkDWCloUNsk91SML98NmQ+vQURpbrnrXd/bvxs3n83LlOWZa6LJr3m117N2GAx669Ity16Yp4Gnhr0CMBZggjX/F0zC47C5YDLpt6rsgYXo6R7X7rcxs9NPxw7hfRhGql5b0prAUMxlqWEcMBw7s6pONoE+rUEjHwT6WG9CnCAyu/p0CLqTE03iUzEs1ZEgHXs/g6JwUFRqtowNU/RtxBfFysSF6QQgqHEZFA9xfVb52CKEPNslv3egt1pZlSWxsHF0Gjbu
+       code_elements :
+        type_code : 29
+        p_codes : []
+    code_elements :
+     type_code : 30
+     p_codes : []
+ controls : []
+ code_elements :
+  type_code : 13
+  p_codes :
+   -
+     code : |1+
+      procédure Etat(portefeuille est PortefeuilleHDBip32 , typeAddr est PortefeuilleHDBip32::typeDérivation )
+      
+      // imprimer 12 étiquettes
+      global
+      gNbEtiquette est entier = 9
+      
+      local
+      // récup adresse publique
+      clAddrI est Adresse <- portefeuille.getAdressePubliqueNumero( 1, typeAddr )
+      sAddressePublique0 est chaine = clAddrI.versTexteIhm()
+      
+      // Init Adresse publique
+      LIB_ADRESSE_PUBLIQUE	        = sAddressePublique0
+      AdresseVersQRCode( clAddrI, CODE_BARRE_ADRESSEPUBLIQUE )
+      //SI clAddrI.getType()=cléPublique.SewgitNatif ALORS
+      //	// en Majuscules pour gagner 45% de taille sur le QRcode
+      //	CODE_BARRE_ADRESSEPUBLIQUE	= Majuscule(sAddressePublique0)
+      //SINON
+      //	CODE_BARRE_ADRESSEPUBLIQUE  = sAddressePublique0
+      //FIN
+      LIB_NOM_COMPTE				    = portefeuille.m_sNom
+     type : 327680
+   -
+     code : |1+
+      gNbEtiquette--
+      renvoyer  gNbEtiquette>=0
+     type : 327695
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Etat1
+resources :
+ string_res :
+  identifier : 0x1d1c384302108958
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAAC68/W0/adbG0nFCRhrE42B5HRnbDzVHaz86sSQyxlBk7I=

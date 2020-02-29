@@ -1,0 +1,284 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : Adresse
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1c8cd2b8182a3574
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      // représente une adresse bitcoin 
+      Adresse est une Classe
+      privée
+      	// type d'adresse
+      	m_type est cléPublique::TypeAddresse 
+      	// version binaire. 
+      	val_Bin est buffer // 20 octets
+      	// version au format texte.
+      	// Base58 ou Bech32 selon m_type. ex "n1sMxGngr46yYtsWyoiFMiaWpcxQEGSoyG" ou "bc1qk8ln3afe5fd5j0042due2rm5gpakec9snzpe7x"
+      	val_FormatTexte est chaine
+      	// réséau. est BtcNet_Main
+      	m_nNetwork est BtcNetwork
+      
+      	
+      FIN
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 2057250817922774388
+     type_code : 27
+     code : |1-
+      PROCEDURE Constructeur()
+      m_type = cléPublique.Compressée
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 2057250817922839924
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+     type : 655360
+   -
+     name : bEstvide
+     procedure_id : 2057250817922905460
+     type_code : 12
+     code : |1+
+      procédure bEstvide()
+      
+      renvoyer val_Bin="" _et_  val_FormatTexte=""
+     type : 458752
+   -
+     name : getType
+     procedure_id : 2086147130026396591
+     type_code : 12
+     code : |1-
+      // renvoie le type d'adresse
+      procédure getType() //: cléPublique::TypeAddresse
+      
+      renvoyer :m_type
+     type : 458752
+   -
+     name : versTexteIhm
+     procedure_id : 2057250817922970996
+     type_code : 12
+     code : |1+
+      // renvoie l’adresse au format texte.
+      // ex : 
+      // "1FscfMT9uT5LdZCdorCeCyucnoTSc2p5jv" ou "bc1qnpa7knmjet7u6fkq842g00mecurns5sr6tj9f5"
+      procédure versTexteIhm()
+      
+      // si on l'a pas encore calculé
+      si val_FormatTexte="" _et_ val_Bin<>"" ALORS
+      	// si nouveau format bech32 ;  "bc1qnpa7knmjet7u6fkq842g00mecurns5sr6tj9f5"
+      	SI m_type = cléPublique.SewgitNatif ALORS
+      		dbgAssertion(taille(val_Bin)=20)
+      		val_FormatTexte = bech32.encodeAdresseBtcBech32( m_nNetwork, val_Bin  )
+      	sinon
+      		// format historique "1FscfMT9uT5LdZCdorCeCyucnoTSc2p5jv"
+      		byteVersion est entier = cléPublique::nGetByteVersionFromNetwork( m_nNetwork, m_type )
+      		val_FormatTexte = encodeBASE58Check( val_Bin,byteVersion)
+      	fin
+      FIN
+      
+      
+      renvoyer val_FormatTexte
+     type : 458752
+   -
+     name : sRaw160bit
+     procedure_id : 2057250817923036532
+     type_code : 12
+     code : |1+
+      procédure sRaw160bit()
+      
+      renvoyer val_Bin
+     type : 458752
+   -
+     name : nGetNetwork
+     procedure_id : 2057250817923102068
+     type_code : 12
+     code : |1-
+      procédure nGetNetwork() : BtcNetwork
+      
+      renvoyer m_nNetwork
+     type : 458752
+   -
+     name : bInitFromBase58
+     procedure_id : 2057250817923167604
+     type_code : 12
+     code : |1+
+      // Init  avec un adresse au format encodage 58.
+      //ex : "n1sMxGngr46yYtsWyoiFMiaWpcxQEGSoyG"
+      PROCEDURE bInitFromBase58( adress chaine, sErreur_OUT chaine="")
+      
+      si taille( adress) <4 alors
+      	sErreur_OUT = "adresse invalide (trop courte)"
+      	renvoyer faux
+      FIN
+      
+      // décodage rax
+      sBufRaw est un Buffer = _decodeBASE58Raw( adress, sErreur_OUT )
+      SI sBufRaw="" ALORS
+      	RENVOYER faux// Erreur
+      FIN
+      
+      // récup préfixe
+      nPrefixe est entier = Asc(sBufRaw[[1]])
+      // selon le préfixe
+      // voir https://en.bitcoin.it/wiki/List_of_address_prefixes
+      selon nPrefixe 
+      	cas PREFIX_Pubkey_P2PKH_MainNet   //Pubkey hash (P2PKH address)	1	17VZNX1SN5NtKa8UQFxwQbFeFc3iqRYhem
+      		m_nNetwork = BtcNet_Main
+      		m_type	   = cléPublique.Compressée
+      	cas PREFIX_ScriptHash_P2SH_MainNet //Script hash (P2SH address)	3	3EktnHQD7RiAE6uzMj2ZifT9YgRrkSgzQX	
+      		m_nNetwork = BtcNet_Main
+      		m_type	   = cléPublique.ScriptHash
+      	cas PREFIX_Pubkey_P2PKH_TestNet
+      		m_nNetwork = BtcNet_Test
+      		m_type	   = cléPublique.Compressée
+      	CAS PREFIX_ScriptHash_P2SH_TestNet  //Testnet pubkey hash
+      		m_nNetwork = BtcNet_Test	
+      		m_type	   = cléPublique.ScriptHash
+      	cas PREFIX_Pubkey_P2PKH_SimNet // 0x3F	
+      		m_nNetwork= BtcNet_Simu
+      		m_type	   = cléPublique.Compressée
+      	CAS PREFIX_ScriptHash_P2PSH_SimNet// 0x40	
+      		m_nNetwork= BtcNet_Simu
+      		m_type	   = cléPublique.ScriptHash		
+      	autre cas
+      		dbgAssertion(faux)
+      		sErreur_OUT = "Préfixe invalide"
+      		renvoyer faux
+      fin
+      
+      
+      // récup RCR
+      sCRC est un Buffer = Droite(sBufRaw,4)
+      
+      // récup buffer résultat
+      sRes est un Buffer = Milieu( sBufRaw, 2, Taille(sBufRaw) -1-4 )
+      
+      // vérif CRC
+      // calcul su checksum
+      sChecksumCalc est Buffer = _sCalcCheckSum(sRes, nPrefixe)
+      SI sChecksumCalc<>sCRC ALORS
+      	sErreur_OUT = "CRC invalide"
+      	RENVOYER faux// Erreur
+      FIN
+      
+      // OK
+      val_FormatTexte = adress
+      val_Bin	    	= sRes
+      dbgAssertion(Taille(val_Bin) = 20)
+      renvoyer  vrai
+      
+     type : 458752
+   -
+     name : bInitFromRaw160Bit
+     procedure_id : 2057250817923233140
+     type_code : 12
+     code : |1-
+      // init a partir du buffer raw de 20 octect qui représente ripemd160( sha25( pubkey ))
+      procédure bInitFromRaw160Bit( bufHash160 buffer,  nNetwork BtcNetwork, type est  cléPublique::TypeAddresse )
+      dbgAssertion(taille(bufHash160)=20,"bufHash160 ne fait pas 160 bits")
+      
+      // Init network + type
+      m_nNetwork = nNetwork
+      m_type	   = type
+      
+      // Init buffer
+      val_Bin = bufHash160
+      // version texte a calculer a la 1er demande
+      val_FormatTexte = ""
+      
+      renvoyer vrai
+     type : 458752
+   -
+     name : _sCalcCheckSum
+     procedure_id : 2057250817923298676
+     type_code : 12
+     code : |1-
+      PROCEDURE _sCalcCheckSum(s buffer, nPrefix entier)
+      
+      sForChecksum est buffer = caract(nPrefix) + s
+      // 2x SHA256
+      sForChecksum =  HashChaîne(HA_SHA_256,sForChecksum)
+      sForChecksum =  HashChaîne(HA_SHA_256,sForChecksum)
+      // on garde les 4 premiers octets 
+      sChecksum est un buffer = gauche(sForChecksum,4) 
+      
+      renvoyer sChecksum
+     type : 458752
+   -
+     name : _decodeBASE58Raw
+     procedure_id : 2057250817923364212
+     type_code : 12
+     code : |1-
+      PROCEDURE  _decodeBASE58Raw( sSource chaîne, sError_OUT chaîne ) : Buffer
+      
+      
+      // caractère pour l'encodage 58
+      soit DIGITS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+      dbgAssertion( Taille(DIGITS) = 58 )
+      
+      
+      nTailleRes est entier = taille(sSource) * 733 /1000 + 1; // log(58) / log(256) arrondi a l'unité supérieure.
+      sResultat est un buffer = Répète(caract(0),nTailleRes)
+      sResERREUR est un buffer // vide
+      
+      // itération sur le caractères a décoder en partant de la gauche (=poids fort)
+      POUR i = 1 _a_ taille(sSource) // a 1 pas -1
+      	// récup valeur encodée de 0 a 57
+      	nVal est un entier = position( DIGITS, sSource[[i]] )  - 1
+      	// si non trouvé
+      	SI nVal<0 ALORS
+      		sError_OUT = ChaîneConstruit( "caractère %1 invalide",  sSource[[i]] )
+      		RENVOYER sResERREUR
+      	FIN
+      	dbgAssertion(nVal>=0)
+      	dbgAssertion(nVal<=57)
+      	
+      	// considère <sResultat> comme un bigint le multiplie par 58 et ajoute nVal
+      	c est un entier = nVal // retenu courante
+      	POUR j=Taille(sResultat) _a_ 1 pas -1
+      		nDigitJ est un entier  = asc(sResultat[[j]])
+      		nResMult est un entier sur 8 = nDigitJ*58 + c
+      		// nouveau reste
+      		c = (nResMult & 0x3f00) / 256;
+      		// MAJ octet n° J
+      		sResultat[[j]] = Caract( nResMult & 0xFF )
+      	FIN
+      	
+      	
+      FIN
+      
+      RENVOYER sResultat
+     type : 458752
+   -
+     name : estEgalA
+     procedure_id : 2057250817923429748
+     type_code : 12
+     code : |1+
+      PROCEDURE estEgalA( addrTest est Adresse )
+      
+      renvoyer addrTest.val_Bin = val_Bin
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1a805b7e00764681
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

@@ -1,0 +1,406 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : Util
+ major_version : 25
+ minor_version : 0
+ type : 7
+ description : ""
+ subtype : 0
+procedure_set :
+ identifier : 0x1a80243f007178a7
+ internal_properties : BQAAAAUAAABGLu41kG7fjQV3iS4F72qmnKaNh5694reolNKIW0iw
+ code_elements :
+  type_code : 31
+  p_codes :
+   -
+     code : |1-
+      
+     type : 720896
+  procedures :
+   -
+     name : BufferVersHexaSansEspace
+     procedure_id : 1909566107899036955
+     type_code : 15
+     code : |1-
+      PROCEDURE BufferVersHexaSansEspace( s buffer )
+      
+      sHex est chaine = BufferVersHexa(s,1,1024)
+      // supprime les espaces et RC
+      sHex = Remplace(sHex, " ", "")
+      sHex = Remplace(sHex, RC, "")
+      
+      renvoyer sHex
+     type : 458752
+   -
+     name : sVariableLengthI8ToBuffer
+     procedure_id : 1909856305961337648
+     type_code : 15
+     code : |1-
+      // encodage sur un nombre d'octects variable de n. en little endian
+      // voir https://en.bitcoin.it/wiki/Protocol_documentation
+      procédure sVariableLengthI8ToBuffer( local n est entier sans signe sur 8 ) : buffer
+      
+      sBufRes est un buffer = caract(0)
+      si n < 0xFD alors
+      	sBufRes = caract(n)
+      	renvoyer sBufRes
+      FIN
+      SI n < 0xFFFF ALORS
+      	nResUI2 est un entier sans signe sur 2 = n
+      	sBufUI2 est buffer= Répète(Caract(0),2)
+      	Transfert(&sBufUI2,&nResUI2,2)	
+      	sBufRes = Caract(0xFD) + sBufUI2
+      	dbgAssertion(taille(sBufRes) = 3)
+      	RENVOYER sBufRes
+      FIN
+      SI n < 0xFFFFFFFF ALORS
+      	nResUI4 est un entier sans signe sur 4 = n
+      	sBufUI4 est buffer= Répète(Caract(0),4)
+      	Transfert(&sBufUI4,&nResUI4,4)	
+      	sBufRes = Caract(0xFE) + sBufUI4	
+      	dbgAssertion(Taille(sBufRes) = 5)
+      	RENVOYER sBufRes
+      FIN
+      // cas n > 0xFFFF FFFF
+      nResUI8 est un entier sans signe sur 8 = n
+      sBufUI8 est buffer= Répète(Caract(0),8)
+      Transfert(&sBufUI8,&nResUI8,8)	
+      sBufRes = Caract(0xFF) + sBufUI8
+      dbgAssertion(Taille(sBufRes) = 9)
+      RENVOYER sBufRes
+     type : 458752
+   -
+     name : HasardCrytographiqueBuffer_OSBOLETE
+     procedure_id : 1911816683680910477
+     type_code : 15
+     code : |1+
+      PROCEDURE HasardCrytographiqueBuffer_OSBOLETE( nNbByte entier ) : buffer
+      
+      /// /!\ BAD /!\
+      // ne PAS utiliser Hasard() qui est déterministe
+      sBufERR est un buffer
+      //pour i = 1 a nNbByte
+      //	s += caract( Hasard( 256 ) ) 
+      //fin
+      
+      soit PROV_RSA_FULL 		 = 1
+      soit CRYPT_VERIFYCONTEXT = 0xF0000000
+      
+      // Utilisation de l'API win32 CryptAcquireContext / CryptGenRandom
+      
+      hCryptProv est un entier système
+      pbData     est un buffer = repete( caract(0), nNbByte)
+      
+      // Init d'un contexte crypto
+      API("Advapi32.dll" ,	"CryptAcquireContextW",
+      	&hCryptProv,               // handle to the CSP
+      	NULL,                  // container name 
+      	NULL,                      // use the default provider
+      	PROV_RSA_FULL,             // provider type
+      CRYPT_VERIFYCONTEXT)                        // flag values
+      si hCryptProv = NULL alors
+      	// echec
+      	renvoyer sBufERR // vide
+      FIN
+      
+      nRes est un entier = ...
+      API("Advapi32.dll","CryptGenRandom",hCryptProv,
+      	nNbByte,
+      	&pbData)
+      si nRes = 0 ALORS
+      	// echec
+      	RENVOYER sBufERR // vide
+      FIN
+      
+      // succes
+      renvoyer pbData
+     type : 458752
+   -
+     name : sha2_256
+     procedure_id : 1912130495468741905
+     type_code : 15
+     code : |1+
+      //PROCEDURE sha2_256(  s est buffer ) : buffer
+      PROCEDURE sha2_256(  s est buffer ) : buffer
+      
+      RENVOYER HashChaîne(HA_SHA_256,s)
+      
+     type : 458752
+   -
+     name : dateVersUnixUtc
+     procedure_id : 1930034066730781378
+     type_code : 15
+     code : |1+
+      // renvoie une date au format time unix (utc) :
+      // nd de secondes depuis le 01/01/1970
+      // https://en.wikipedia.org/wiki/Unix_time
+      PROCÉDURE dateVersUnixUtc( dateLocaleWD est une DateHeure ) : entier
+      
+      //@Ancien code en WL pour vérif
+      nRes est entier sur 8
+      dateUtc est un DateHeure = DateHeureLocaleVersUTC(dateLocaleWD)
+      sDate est chaine = dateUtc..PartieDate
+      nbjour est entier = DateVersEntier(sDate,faux) - DateVersEntier("19700101",Faux)
+      nRes = nbjour * (24*60*60) + HeureVersEntier( dateUtc..PartieHeure )/100
+      dbgAssertion(nRes = DateHeureVersEpoch(dateLocaleWD))
+      
+      RENVOYER DateHeureVersEpoch(dateLocaleWD)
+      
+     type : 458752
+   -
+     name : unixUtcVersDate
+     procedure_id : 1945641612834134199
+     type_code : 15
+     code : |1+
+      // convertion d'une date au format unix utc => WL heure locale
+      procédure unixUtcVersDate( local timestamp est entier ) : dateheure
+      
+      renvoyer EpochVersDateHeure( timestamp )
+      
+     type : 458752
+   -
+     name : getRepDonnéeSelonBtcNetwork
+     procedure_id : 1942239024067379219
+     type_code : 15
+     code : |1+
+      // renvoie le chemin local compble pour les bdd selon le réseau. 
+      // ex BtcNet_Simu => S:\Mes Projets\WD Bitcoin Wallet\Exe\simnet
+      PROCEDURE getRepDonnéeSelonBtcNetwork(network BtcNetwork) : chaine
+      
+      // selon le type de réseau
+      sNetRep  est chaîne
+      selon network
+      	CAS BtcNet_Inconnu
+      		dbgAssertion(faux)
+      	CAS BtcNet_Main
+      		sNetRep  = "mainnet"
+      	CAS BtcNet_Test
+      		sNetRep = "testnet"
+      	CAS BtcNet_Simu
+      		sNetRep = "simnet"
+      	cas BtcNet_TestAuto
+      		sNetRep = "autotest"
+      	autre cas
+      		dbgAssertion(faux)
+      		sNetRep = "XXX"
+      FIN
+      
+      //
+      sRepDonnee est chaine = ComplèteRep(fRepDonnées()) + sNetRep 
+      renvoyer sRepDonnee
+     type : 458752
+   -
+     name : dbgAssertion
+     procedure_id : 2049862052245123537
+     type_code : 15
+     code : |1-
+      procédure dbgAssertion( cond, txt="")
+      si pas cond ALORS
+      	stop
+      	VersPressePapier(txt)
+      FIN
+      <COMPILE SI TypeConfiguration<>ApplicationLinux64>
+      	TestVérifie(cond, "dbgAssertion " + txt)
+      <SINON>
+      	wl.dbgAssertion(cond, "dbgAssertion " + txt)
+      <FIN>
+     type : 458752
+   -
+     name : AdapteTaillePolice
+     procedure_id : 2060171928567278506
+     type_code : 15
+     code : |1+
+      // Adapter la taille de la police d'un champ pour qu'il rentre dans la 
+      PROCEDURE AdapteTaillePolice(LIB est champ)
+      
+      
+      LIB..PoliceTaille = 16
+      // tant que ca déborde
+      nLargeurTexte est un entier = TexteLargeur(LIB, LIB..ValeurAffichée)
+      TANTQUE nLargeurTexte > LIB..Largeur
+      	LIB..PoliceTaille--
+      	SI LIB..PoliceTaille=7 ALORS
+      		SORTIR
+      	FIN
+      	nLargeurTexte  = TexteLargeur(LIB, LIB..ValeurAffichée)
+      FIN
+     type : 458752
+   -
+     name : getMasqueeEtLibSelonUnité
+     procedure_id : 2060510955398548719
+     type_code : 15
+     code : |1+
+      // renvoie le masque et le libellé pour une unité d'affichage
+      procédure getMasqueeEtLibSelonUnité(unite est btcMontant::EUnitéMontant ): (chaine, chaine)
+      
+      
+      // Nb : représente au max 10 000 BTC.
+      SELON unite
+      	CAS btcMontant.Satoshi
+      		renvoyer ("999 999 999 999",   "sat")
+      	CAS btcMontant.Bits
+      		renvoyer ("9 999 999 999,99",  "bits")
+      	CAS btcMontant.MilliBtc
+      		Renvoyer ("9 999 999,999 99",  "mBtc")
+      	CAS btcMontant.Bitcoin
+      		renvoyer ("9 999,99 999 999",  "BTC")
+      	CAS btcMontant.Fiat
+      		renvoyer ("999 999 999 999,99","€")
+      	CAS btcMontant.Invalide
+      		dbgAssertion(Faux)
+      		// en sat.
+      		RENVOYER ("999 999 999 999",  "sat")
+      FIN
+     type : 458752
+   -
+     name : ToastAffiche
+     procedure_id : 2083264335287944138
+     type_code : 15
+     code : |1-
+      //Pour portage Linux
+      PROCEDURE ToastAffiche( s chaine )
+      
+      <COMPILE SI TypeConfiguration=ApplicationLinux64>
+      	WL.info(s)
+      <sinon>
+      	WL.toastAffiche( s )
+      <fin>
+      
+      //Pour portage Linux
+     type : 458752
+   -
+     name : AnimationPrépare
+     procedure_id : 2083265928720984909
+     type_code : 15
+     code : |1-
+      PROCÉDURE AnimationPrépare(*)
+      
+      <COMPILE SI TypeConfiguration<>ApplicationLinux64>
+      	WL.AnimationPrépare(MesParamètres)
+      <FIN>
+     type : 458752
+   -
+     name : AnimationJoue
+     procedure_id : 2083266388282527888
+     type_code : 15
+     code : |1+
+      PROCÉDURE AnimationJoue(*)
+      
+      <COMPILE SI TypeConfiguration<>ApplicationLinux64>
+      	WL.AnimationJoue(MesParamètres)
+      <FIN>
+     type : 458752
+   -
+     name : AfficheSiteWb
+     procedure_id : 2083267191441468059
+     type_code : 15
+     code : |1+
+      procédure AfficheSiteWb( url chaine )
+      
+      <COMPILE SI TypeConfiguration<>ApplicationLinux64>
+      	WL.LanceAppliAssociée(url)
+      <SINON>
+      	//@TODO
+      	info("Non disponible sous Linux. URL mise dans le presse-papier :" + rc+ url )
+      	VersPressePapier(url)
+      <FIN>
+     type : 458752
+   -
+     name : AdresseVersQRCode
+     procedure_id : 2098348006696182602
+     type_code : 15
+     code : |1+
+      PROCEDURE AdresseVersQRCode( adresseSource est Adresse, QR_CODE est champ )
+      
+      // convertion de l'adresse vers sa représentation texte.
+      // ex : "bc1q5jl9fpzxhlkgz7xnl98f4390wg9m8690h6wcpy"
+      sCode est une chaîne = adresseSource.versTexteIhm()
+      
+      // type d'adresse
+      type est cléPublique::TypeAddresse = adresseSource.getType()
+      SI type=cléPublique.SewgitNatif ALORS
+      	// en Majuscules pour gagner 45% de taille sur le QRcode
+      	QR_CODE	= Majuscule(sCode)
+      SINON
+      	QR_CODE = sCode
+      FIN
+      
+     type : 458752
+   -
+     name : AjouteEspaceEtRc
+     procedure_id : 2099480997855201357
+     type_code : 15
+     code : |1+
+      // ajouter des " " et des RC dans une chaine pour la rendre plus lisible.
+      // ex: bc1q73rdttdvz5dghrg4k09v78fzyflgemxmhdlple
+      //     bc1q 73rd ttdv z5dg hrg4
+      //     k09v 78fz yflg emxm hdlp le
+      PROCEDURE AjouteEspaceEtRc( s  chaine, nTailleGroupement est entier = 6 ) : chaine
+      
+      sResultatFormaté est chaine
+      
+      nbGroupement   est un entier = 5
+      nbGroupementRC est un entier = nbGroupement * nTailleGroupement
+      
+      
+      pour i = 1 _a_ taille(s)
+      	sResultatFormaté += s[[i]]
+      	// un " " tous les 4 caractère
+      	si i modulo nTailleGroupement= 0 ALORS
+      		sResultatFormaté += " "
+      	FIN
+      	// un RC tous les 3 blocs
+      	SI i modulo nbGroupementRC=0 ALORS
+      		sResultatFormaté += rc
+      	FIN
+      FIN
+      
+      renvoyer sResultatFormaté
+      
+      
+     type : 458752
+   -
+     name : AjouteEspace
+     procedure_id : 2101753911503295249
+     type_code : 15
+     code : |1+
+      // ajouter des " " dans une chaine pour la rendre plus lisible.
+      // ex: bc1q73rdttdvz5dghrg4k09v78fzyflgemxmhdlple
+      //     bc1q 73rd ttdv z5dg hrg4 k09v 78fz yflg emxm hdlp le
+      PROCEDURE AjouteEspace( s_INTOUT est chaine , nTailleGroupement est entier = 6 ) : chaine unicode
+      
+      sResultatFormaté est chaine unicode
+      
+      nbGroupement   est un entier = 5
+      pour i = 1 _a_ taille(s_INTOUT)
+      	sResultatFormaté += s_INTOUT[[i]]
+      	// un " " tous les 4 caractère
+      	si i modulo nTailleGroupement= 0 ALORS
+      		sResultatFormaté += " "
+      	FIN
+      FIN
+      
+      renvoyer sResultatFormaté
+      
+      
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : ProcéduresGlobales1
+resources :
+ string_res :
+  identifier : 0x1a802439006f61f3
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+  strings :
+   -
+     text :
+      fr-FR : L'image du QR Code a été sauvée dans le presse-papier
+      en-GB : L'image du QR Code a été sauvée dans le presse-papier
+      es-ES : L'image du QR Code a été sauvée dans le presse-papier
+      ar-SA : L'image du QR Code a été sauvée dans le presse-papier
+     index : 0
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

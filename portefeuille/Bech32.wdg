@@ -1,0 +1,797 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : Bech32
+ major_version : 25
+ minor_version : 0
+ type : 7
+ description : ""
+ subtype : 0
+procedure_set :
+ identifier : 0x1cf3796b092d61eb
+ internal_properties : BQAAAAUAAABGLu41kG7fjQV3iS4F72qmnKaNh5694reolNKIW0iw
+ code_elements :
+  type_code : 31
+  p_codes :
+   -
+     code : |1-
+      
+      constant
+      	// pour la conversion vers chaine
+      	 _VAL5BITSVERSCHAR = "qpzry9x8" + "gf2tvdw0" + "s3jn54kh" + "ce6mua7l"
+      	 
+      fin
+      // pour la conversion vers binaire
+      gtabCharToBits est un tableau associatif d'entiers
+     type : 720896
+   -
+     code : |1-
+      
+     type : 720898
+  procedures :
+   -
+     name : _InitTabCharToBitAu1erAppel
+     procedure_id : 2089075602060044738
+     type_code : 15
+     code : |1-
+      // Init de gtabCharToBits si pas encore fait
+      procédure privéé _InitTabCharToBitAu1erAppel()
+      
+      SI gtabCharToBits..Occurrence=0 ALORS
+      	POUR i=1 a 32
+      		c est chaine = _VAL5BITSVERSCHAR[[i]]
+      		gtabCharToBits[c] = i-1
+      	FIN
+      FIN
+     type : 458752
+   -
+     name : _bech32_polymod
+     procedure_id : 2086872867952515039
+     type_code : 15
+     code : |1+
+      PROCÉDURE privée _bech32_polymod( _tabData tableau d'entier  ) : entier sur 4 sans signe
+      
+      GEN est un tableau d'entier sur 4 sans signe = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3]
+      
+      // calcul  du "polynome" résultant d'un mélange des entiers d'entrée et des valeur prédéfinie dans GEN
+      chk est entier sur 4 sans signe = 1
+      POUR TOUT entierI de _tabData
+      	poidFortChk est entier sur 4 sans signe = bitDécaleDroite(chk , 25)
+      	chk = OUExclusifBinaire( bitDécaleGauche( (chk & 0x1ffffff),5),  entierI) 
+      	POUR i_ = 0 a 4
+      		// si le i<eme> de du poids fort est a 1, on XOR avec une de valeurs prédéfinies sur 30 bits GEN
+      		SI ( bitDécaleDroite(poidFortChk,i_) & 1)=1 ALORS
+      			chk = OUExclusifBinaire( chk,  GEN[i_+1] )
+      		FIN
+      	FIN//FOR i_ = 0 a 4
+      FIN
+      RENVOYER chk
+     type : 458752
+   -
+     name : _bech32_hrp_expand
+     procedure_id : 2086873005391501027
+     type_code : 15
+     code : |1-
+      PROCÉDURE  _bech32_hrp_expand(LOCAL chaineAEtendre chaine ) : tableau d'entier 
+      resultat est un tableau d'entier
+      // 3 bits de poids fort
+      POUR numChar=1 _a_ taille(chaineAEtendre)
+      	resultat.Ajoute( bitDécaleDroite( Asc(chaineAEtendre[[numChar]]) , 5 ) )
+      FIN
+      //  + [0]
+      resultat.Ajoute( Caract(0) )
+      // +  5 bits de poids faible
+      POUR numChar=1 _À_ Taille(chaineAEtendre)
+      	resultat.Ajoute( Asc(chaineAEtendre[[numChar]]) & 31 )
+      FIN
+      RENVOYER resultat
+      	
+     type : 458752
+   -
+     name : _sCalcCRC
+     procedure_id : 2086144553025167851
+     type_code : 15
+     code : |1+
+      // calcul du checksum
+      // selon https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
+      
+      procédure _sCalcCRC( prefixe chaine, data tableau d'entier ) : chaine
+      
+      
+      
+      
+      //	Procédure interne  _bech32_polymod( _tabData tableau d'entier  ) : entier sur 4 sans signe
+      //	 	// calcul  du "polynome" résultant d'un mélange des entiers d'entrée et des valeur prédéfinie dans GEN
+      //		chk est entier sur 4 sans signe = 1
+      //		pour tout entierI de _tabData
+      //			poidFortChk est entier sur 4 sans signe = bitDécaleDroite(chk , 25)
+      //			chk = OUExclusifBinaire( bitDécalegauche( (chk & 0x1ffffff),5),  entierI) 
+      //			pour i_ = 0 a 4
+      //				// si le i<eme> de du poids fort est a 1, on XOR avec une de valeurs prédéfinies sur 30 bits GEN
+      //				si ( bitDécaleDroite(poidFortChk,i_) & 1)=1 ALORS
+      //					chk = OUExclusifBinaire( chk,  GEN[i_+1] )
+      //				fin
+      //			fin//FOR i_ = 0 a 4
+      //		FIN
+      //		renvoyer chk
+      //	fin // procédure interne
+      //	
+      	// crée un tableau avec uniquement des valeurs de 0 a 31
+      //	procédure interne _bech32_hrp_expand(local chaineAEtendre chaine ) : tableau d'entier 
+      //		resultat est un tableau d'entier
+      //		// 3 bits de poids fort
+      //		POUR numChar=1 _a_ taille(chaineAEtendre)
+      //			resultat.Ajoute( bitDécaleDroite( asc(chaineAEtendre[[numChar]]) , 5 ) )
+      //		FIN
+      //		//  + [0]
+      //		resultat.Ajoute( caract(0) )
+      //		// +  5 bits de poids faible
+      //		POUR numChar=1 _À_ Taille(chaineAEtendre)
+      //			resultat.Ajoute( asc(chaineAEtendre[[numChar]]) & 31 )
+      //		FIN
+      //		renvoyer resultat
+      //	FIN
+      	
+      	
+      // calcul final
+      values  est tableau d'entier = _bech32_hrp_expand(prefixe) 
+      // concatène les 2 tableau
+      values.Ajoute( data )
+      tab_0   est tableau d'entier  = [0, 0, 0, 0, 0, 0] // 6 fois  0
+      values.Ajoute( tab_0 )
+      // calcul du polynome associé
+      polymod est entier sur 4 sans signe = OUExclusifBinaire( _bech32_polymod(values) , 1) 
+      
+      // calcul résultat
+      sResultat est chaine
+      pour i = 0 a 5
+      	// (polymod >> 5 * (5 - i)) & 31*
+      	nbBitDecalage est entier =  5 * (5 - i)
+      	n est entier  = (bitDécaleDroite( polymod, nbBitDecalage)) & 31
+      	// encodage 
+      	//sResultat += Caract(n)
+      	sResultat += _VAL5BITSVERSCHAR[[n+1]]
+      FIN
+      
+      renvoyer sResultat
+     type : 458752
+   -
+     name : _nGet5BitFromBuffer
+     procedure_id : 2086144553025233387
+     type_code : 15
+     code : |1+
+      // renvoyer un entier sur 5 bits dans un buffer avec un offset en bit
+      PROCEDURE _nGet5BitFromBuffer( s buffer, nOffetBit entier) : entier
+      	// récupérer <nNBbit> dans un octets.
+      	PROCEDURE INTERNE _nGetXBitFrom1ByteInBuffer( pBuf est entier systeme,  nNbBit entier, bLowBits booléen)
+      		n est un entier sans signe sur 1
+      		// récup de l'octet
+      		Transfert(&n,  pBuf, 1)
+      		// récup de la partie haute ou basse de l'octet
+      		RENVOYER nGetXBitFrom1Byte(n,nNbBit,bLowBits)
+      	FIN
+      	
+      nRes  est un entier sans signe sur 4
+      nLow  est un entier sans signe sur 4
+      nHigh est un entier sans signe sur 4
+      nOffssetByte est entier = nOffetBit/8
+      nOffssetBitHigh est entier = nOffetBit - nOffssetByte*8 // ie modulo 8 
+      // si on a les 5 bits dans le 1er octet
+      //3 = 8 - 5
+      si nOffssetBitHigh <= 3  ALORS
+      	//récupere un peu plus de bits en partant du poids fort (false)
+      	nHigh = _nGetXBitFrom1ByteInBuffer( &s + nOffssetByte, 5+nOffssetBitHigh, false) 
+      	// masque pour ne prendre que les 5 bits a la position <nOffssetBitHigh>
+      	nRes  =  nHigh & 0x1F
+      sinon
+      	// il faut prendre des bits dans l'octet suivant	
+      	nSizeBitHigh    est entier  = 8 -nOffssetBitHigh
+      	dbgAssertion(nSizeBitHigh>0)
+      	dbgAssertion(nSizeBitHigh<5)
+      	nSizeBitLow	    est entier  = 5-nSizeBitHigh // bits dans l'octet suivant
+      	dbgAssertion(nSizeBitLow>0)
+      	dbgAssertion(nSizeBitLow<5)
+      	nHigh = _nGetXBitFrom1ByteInBuffer( &s + nOffssetByte,    nSizeBitHigh, Vrai)
+      	si nOffssetByte+1<taille(s) alors
+      		nLow  = _nGetXBitFrom1ByteInBuffer( &s+  nOffssetByte+1,  nSizeBitLow,  Faux)
+      		nRes = nLow + bitDécaleGauche( nHigh, nSizeBitLow)
+      	else
+      		nRes =        bitDécaleGauche( nHigh, nSizeBitLow)
+      	fin
+      	
+      fin
+      
+      
+      dbgAssertion(nRes>=0)
+      dbgAssertion(nRes<=31)
+      	
+      RENVOYER nRes
+     type : 458752
+   -
+     name : _TabIntVersChainEncodee
+     procedure_id : 2086144553025298923
+     type_code : 15
+     code : |1+
+      // encoder un tableau d'entier sur 5 bits en un chaine en bench32.
+      // ex : "a12uel5l"
+      procédure _TabIntVersChainEncodee( tabInt5 est tableau d'entier ) : chaine
+      
+      résultat est chaine
+      
+      // conversion en entiers sur 5 bits
+      //tabInt5 est tableau d'entier = _bufferVersTabEntier5bits( sAEncoder )
+      pour tout n de tabInt5
+      	// entier de 0 a 31 => caratère lisible.
+      	si ( 0 <= n <= 31 ) alors
+      		résultat += _VAL5BITSVERSCHAR[[ n +1 ]]
+      	sinon
+      		dbgAssertion(faux)
+      	fin
+      FIN
+      RENVOYER résultat
+     type : 458752
+   -
+     name : _bufferVersTabEntier5bits
+     procedure_id : 2086144553025364459
+     type_code : 15
+     code : |1+
+      PROCÉDURE _bufferVersTabEntier5bits( sAEncoder buffer ) : tableau d'entier
+      
+      résultat est tableau d'entier
+      
+      numBit est entier = 1
+      numBitMax est entier =  taille(sAEncoder) * 8
+      // on encode par bloc de 32 bits
+      POUR numBit=0 À  numBitMax-1 PAS 5
+      	// récup de 5 bits dans le bloc
+      	nValBloc est un entier = _nGet5BitFromBuffer(sAEncoder, numBit)
+      	
+      	// encodage
+      	résultat.Ajoute( nValBloc )
+      FIN
+      
+      RENVOYER résultat
+     type : 458752
+   -
+     name : _ChainEncodeeVersTabEntier5bits
+     procedure_id : 2086876626049052847
+     type_code : 15
+     code : |1+
+      // convertion brute d'un chaine vers un tableau d'entier 5 bits
+      // ex : zw508d6qejxtdg4y5r3zarvaryvg6kdaj = > [5, 0, ... ]
+      Procédure _ChainEncodeeVersTabEntier5bits( sData chaine ) : (booléen, tableau d'entier, chaine )
+      
+      // Init tabCharToBits si pas encore fait
+      _InitTabCharToBitAu1erAppel()
+      
+      // parcourt 1 a 1 des caractères a décoder
+      tabResultat est tableau d'entier
+      pour i = 1 _a_ Taille(sData)
+      	c est une chaine = sData[[i]]
+      	// si pas dans le set
+      	si pas gtabCharToBits[c]..existe ALORS
+      		// Erreur
+      		renvoyer (faux, tabResultat, ChaîneConstruit( <§@1cefe3cc0393f81e0003§> ,  i, c , asc(c) ))
+      	FIN
+      	tabResultat.Ajoute( gtabCharToBits[c] )
+      
+      FIN
+      // succes
+      renvoyer  (vrai, tabResultat,"")
+      
+     type : 458752
+   -
+     name : encodeAdresseBtcBech32
+     procedure_id : 2086144553025429995
+     type_code : 15
+     code : |1+
+      // construit une adresse BTC au format BIP 173 / Bech32.
+      //ex "bc1qv7sypwlmq5fdr4kyjk82wfynww70ep79uayknz"
+      procédure encodeAdresseBtcBech32(  réseau BtcNetwork, sData20ou32bits buffer, nVersionScript est entier = 0 ) : chaine
+      
+      nTailleData est entier = Taille(sData20ou32bits)
+      // doit faire 20 ou 32 octets
+      si nTailleData<>20 _ET_ nTailleData<>32 alors
+      	// Erreur
+      	dbgAssertion(faux,"La taille doit faire 20 ou 32")
+      	renvoyer "" 
+      fin
+      
+      // calcul préfixe. ex "bc1"
+      sPréfixe est chaine = "bc"
+      SI réseau<>BtcNet_Main ALORS
+      	sPréfixe = "tb" // testnet pour tous les autres
+      FIN
+      
+      
+      // conversion des donnée en tableau d'entier sur 5 bits
+      tabInt5Data est tableau d'entier = _bufferVersTabEntier5bits( sData20ou32bits )
+      // n° de version de script au début
+      tabInt5Data.Insère(1, nVersionScript)
+      
+      résultat est chaine = _encodeTabIntBech32(sPréfixe,  tabInt5Data )
+      
+      // Blindage : on vérifie qu'on peut la décoder
+      OK_vérif 	  est booléen
+      reseau_vérif  est BtcNetwork
+      buffer_vérif  est Buffer
+      version_verif est entier
+      erreur 		  est chaîne
+      (OK_vérif, reseau_vérif, buffer_vérif, version_verif, erreur ) = decodeBitcoinBech32( résultat )
+      SI pas OK_vérif ALORS
+      	dbgAssertion(Faux,erreur)
+      	renvoyer ""
+      FIN
+      si reseau_vérif<>réseau _ou_ buffer_vérif<>sData20ou32bits _ou_ version_verif<>nVersionScript ALORS
+      	dbgAssertion(Faux,"on ne décode pas ce qu'on a encodé")
+      	RENVOYER ""
+      FIN
+      
+      // OK
+      renvoyer résultat
+      
+     type : 458752
+   -
+     name : encodeBufferBech32
+     procedure_id : 2086144553025495531
+     type_code : 15
+     code : |1+
+      // construit une chaine encodant un buffer au format bech32
+      procédure encodeBufferBech32( sPréfixe chaine, sBufData  buffer ) : chaine
+      
+      // conversion des donnée en tableau d'entier sur 5 bits
+      tabInt5Data est tableau d'entier = _bufferVersTabEntier5bits( sBufData )
+      renvoyer _encodeTabIntBech32(sPréfixe, tabInt5Data )
+      
+     type : 458752
+   -
+     name : decodeBufferBech32
+     procedure_id : 2089076302172579513
+     type_code : 15
+     code : |1+
+      // décode une chaine au format bench32
+      // renvoie le triplet (OK, préfixe, données, erreur )
+      procédure decodeBufferBech32( chaineADécoder chaine ) : ( booléén, chaine, buffer, chaine )
+      
+      bufferRésultat est un buffer
+      
+      // décodage interne
+      soit (OK, préfixe, tableauEntiers5bits, erreur) = _decodeBenche32toTabInt( chaineADécoder )
+      si pas OK ALORS
+      	// erreur
+      	renvoyer (faux, "", bufferRésultat, erreur)
+      FIN
+      // vérification du CRC
+      si pas _bVerifieChechsum(préfixe,tableauEntiers5bits) ALORS
+      	// erreur
+      	RENVOYER (Faux, "", bufferRésultat, <§@1cefe3cc0393f81e0004§>) 
+      FIN
+      
+      // conversion vers buffer
+      (OK, bufferRésultat, erreur ) = _TabInt5BitVersBuffer(tableauEntiers5bits, tableauEntiers5bits..Occurrence-6 )
+      SI PAS OK ALORS
+      	// erreur
+      	RENVOYER (Faux, "", bufferRésultat, erreur)
+      FIN
+      // succes 
+      renvoyer ( vrai, préfixe, bufferRésultat, "" )
+     type : 458752
+   -
+     name : decodeBitcoinBech32
+     procedure_id : 2089119517886804270
+     type_code : 15
+     code : |1+
+      // décoder une adress bitcoin au format bech32
+      // renvoie ( OK, réseau BtcNetwork, sData20ou32bits , versionScript, erreur)
+      procédure decodeBitcoinBech32( chaineADécoder chaine ) : (booléen,  BtcNetwork,  buffer,  entier, chaine )
+      
+      bufferVide     est un buffer // pour erreurs
+      bufferRésultat est un buffer
+      
+      // décodage interne
+      soit (OK, préfixe, tableauEntiers5bits, erreur) = _decodeBenche32toTabInt( chaineADécoder )
+      SI PAS OK ALORS
+      	// erreur
+      	RENVOYER (Faux, BtcNet_Inconnu,  bufferVide, 0, erreur)
+      FIN
+      // selon le préfixe
+      réseau est BtcNetwork
+      selon préfixe
+      	cas "bc" 
+      		réseau = BtcNet_Main
+      	cas "tb" 
+      		réseau = BtcNet_Test
+      	AUTRE CAS
+      		// erreur
+      		RENVOYER (Faux, BtcNet_Inconnu,  bufferRésultat, 0, ChaîneConstruit(<§@1cefe3cc0393f81e0006§>, préfixe))
+      FIN
+      // vérification du CRC
+      SI PAS _bVerifieChechsum(préfixe,tableauEntiers5bits) ALORS
+      	// erreur
+      	RENVOYER (Faux, BtcNet_Inconnu, bufferVide, 0, <§@1cefe3cc0393f81e0004§>) 
+      FIN
+      
+      
+      // récup  n°version de script
+      versionScript est entier = tableauEntiers5bits[1]
+      si versionScript>=16 ALORS
+      	RENVOYER (Faux, BtcNet_Inconnu,  bufferVide, 0, <§@1cefe3cc0393f81e0007§>)
+      FIN
+      TableauSupprime(tableauEntiers5bits,1)
+      si tableauEntiers5bits..Occurrence<6 ALORS
+      	RENVOYER (Faux, BtcNet_Inconnu,  bufferVide, 0, <§@1cefe3cc0393f81e000d§>)
+      FIN
+      
+      // conversion vers buffer
+      (OK, bufferRésultat, erreur ) = _TabInt5BitVersBuffer(tableauEntiers5bits, tableauEntiers5bits..Occurrence-6 )
+      SI PAS OK ALORS
+      	// erreur
+      	RENVOYER (Faux, BtcNet_Inconnu,  bufferVide, 0, erreur)
+      FIN
+      // vérif taille 
+      tailleResultat est entier = Taille(bufferRésultat)
+      si versionScript=0 _et_ ( tailleResultat<>20 _et_ tailleResultat<>32) ALORS
+      	RENVOYER (Faux, BtcNet_Inconnu,  bufferVide, 0, <§@1cefe3cc0393f81e0008§>)
+      FIN
+      SI PAS 2<=tailleResultat<=40 ALORS
+      	RENVOYER (Faux, BtcNet_Inconnu,  bufferVide, 0, <§@1cefe3cc0393f81e000c§>)
+      FIN
+      
+      // succces
+      renvoyer (vrai,réseau,bufferRésultat, versionScript, "" )
+      
+      
+      
+     type : 458752
+   -
+     name : _Set5BitInBuffer
+     procedure_id : 2089086893282199714
+     type_code : 15
+     code : |1+
+      // affecter 5 bits dans un buffer a l'offset <nOffetBit>
+      // Format Big endian :  0 indique le 5 bits de poids fort
+      // <bufferAModifier> doit avoir été initialisé avec des 0 et avoir la bonne taille
+      procédure _Set5BitInBuffer( bufferAModifier Buffer,  LOCAL nOffetBit entier, LOCAL nVal5bitToSet entier )
+      dbgAssertion(nVal5bitToSet>=0)
+      dbgAssertion(nVal5bitToSet<32)
+      
+      
+      nOffsetEnOctet est entier = nOffetBit / 8
+      nDecalageBit   est entier = nOffetBit modulo 8 
+      nTailleBuf est entier = Taille(bufferAModifier)
+      // extrait la partie a modifier
+      sSousBuf est un buffer = Milieu(bufferAModifier,nOffsetEnOctet+1,2)
+      
+      	
+      // si on a 2 octets dispo dans s a la position 
+      si nOffsetEnOctet+2 <= nTailleBuf ALORS
+      
+      	nValCourante est entier  = bufferToUI2BigEndian( sSousBuf )
+      	// bit a mettre a 1
+      	nMasque_1    est entier  = bitDécaleDroite( nVal5bitToSet*0x800,  nDecalageBit )  // *0x800 ! << 5  + 8
+      	//calcul nouvelle valeur 
+      	nValResultat est entier sans signe sur 2 = OUBinaire( nValCourante, nMasque_1)
+      	// MAJ de 2 octets dans le buffer en big endian
+      	// poids fort au début
+      	bufferAModifier[ nOffsetEnOctet+1 ] = caract(PoidsFort  (nValResultat,1))
+      	bufferAModifier[ nOffsetEnOctet+2 ] = Caract(PoidsFaible(nValResultat,1))
+      	
+      sinon
+      	// Cas du dernier octet
+      	dbgAssertion(nOffsetEnOctet+1 = nTailleBuf )
+      	
+      	nValCourante_8 est entier   = asc( sSousBuf )
+      	// bit a mettre a 1
+      	nMasque_1_8    est entier    = bitDécaleDroite( nVal5bitToSet*0x8,  nDecalageBit )  // *0x8 : << 5  
+      	//calcul nouvelle valeur 
+      	nValResultat_8 est entier sans signe sur 1 = OUBinaire( nValCourante_8, nMasque_1_8)
+      	// MAJ de 1 octets dans le buffer 
+      	bufferAModifier[ nOffsetEnOctet+1 ] = nValResultat_8
+      fin
+      
+      // on devrait relire la valeur qu'on vient d'écrire
+      dbgAssertion( _nGet5BitFromBuffer(bufferAModifier,nOffetBit) = nVal5bitToSet)	
+      // on ne doit pas agrandir le buffer
+      dbgAssertion( nTailleBuf = Taille(bufferAModifier) )
+      retour
+      
+      ///@@@ ancien code
+      //
+      //// affecter bit a bit
+      //POUR i=0 À 4
+      //	//récup du ieme bit de nVal11bitToSet.0 = le plus fort
+      //	// ex:               012 3456 789A
+      //	// "0x036C" => "00000011 0110.1100"
+      //	nPosBitSrc est entier = 4-i // position en pow2 (0 = poids faible)
+      //	bBit est un booléen = bGet1BitFromInt(nVal5bitToSet, nPosBitSrc)
+      //	// si 1 met à 1 dans le buffer
+      //	SI bBit<>0 ALORS
+      //		// fixer le ieme bit du buffer
+      //		soit nOffetBitCur = nOffetBit + i
+      //		nOffssetByte est entier   = nOffetBitCur/8
+      //		nNumBit est entier = 7-modulo(nOffetBitCur,8)
+      //		p est un entier système = &bufferAModifier + nOffssetByte
+      //		Set1BitTo1(  p, nNumBit ) 
+      //	FIN
+      //	
+      //FIN	
+      //// on devrait relire la valeur qu'on vient d'écrire
+      //dbgAssertion( _nGet5BitFromBuffer(bufferAModifier,nOffetBit) = nVal5bitToSet)	
+      //RETOUR
+     type : 458752
+   -
+     name : _TabInt5BitVersBuffer
+     procedure_id : 2089081718159123850
+     type_code : 15
+     code : |1+
+      // transforme un tableau entier sur 5 bits en un buffer.
+      // renvoie (OK, bufferRésultat, erreur )
+      procédure _TabInt5BitVersBuffer(tableauEntiers5bits est tableau d'entier, nNbentierAConvertir est un entier=-1 ) : (booléen, buffer, chaine )
+      
+      bufferRésultat est buffer
+      // calcul de la taille du buffer résultat en octett
+      nNbEntier5Bit   est entier = tableauEntiers5bits.occurrence() 
+      si nNbentierAConvertir<>-1 ALORS
+      	nNbEntier5Bit = nNbentierAConvertir
+      	si nNbEntier5Bit<0 ALORS
+      		// erreur
+      		renvoyer (faux, bufferRésultat, <§@1cefe3cc0393f81e0005§>)
+      	FIN
+      FIN
+      
+      nTailleRésultat est entier = nNbEntier5Bit * 5 / 8
+      nbbitOrphelin est entier =  nNbEntier5Bit*5 - nTailleRésultat*8
+      dbgAssertion(nbbitOrphelin>=0)
+      // Init buffer résultat avec des 0
+      bufferRésultat = Répète(caract(0), nTailleRésultat)
+      // si il reste des bits orphelins
+      SI nbbitOrphelin<>0 ALORS
+      	// 4 au max
+      	si nbbitOrphelin>4 ALORS
+      		RENVOYER (Faux, bufferRésultat, <§@1cefe3cc0393f81e000e§> )
+      	FIN
+      	// +1 octet a 0 a la fin pour le padding
+      	bufferRésultat += caract(0) 
+      FIN
+      
+      pour i = 0 _a_ nNbEntier5Bit-1
+      	// récup du Ieme entier
+      	nvalI est un entier = tableauEntiers5bits[i+1]
+      	// fixe 5 bits dans le résultat
+      	_Set5BitInBuffer(bufferRésultat,i*5,nvalI)
+      	
+      FIN
+      
+      // si il reste des bits orphelins
+      SI nbbitOrphelin<>0 ALORS
+      	// le dernier octet doit être a 0
+      	si droite(bufferRésultat,1)<>caract(0) ALORS
+      		renvoyer (faux, bufferRésultat,  <§@1cefe3cc0393f81e0002§> )
+      	FIN
+      	// OK,, on enleve le char en trop
+      	bufferRésultat = gauche(bufferRésultat, nTailleRésultat)
+      FIN
+      dbgAssertion(nTailleRésultat = Taille(bufferRésultat))
+      
+      // SUCESS
+      renvoyer ( vrai, bufferRésultat, "")
+      
+     type : 458752
+   -
+     name : _encodeTabIntBech32
+     procedure_id : 2086144553025561067
+     type_code : 15
+     code : |1+
+      // encodage au format Bech32.
+      // prend un prefixe (ex "bc") et un buffer avec la charge a encoder
+      //ex "bc1qv7sypwlmq5fdr4kyjk82wfynww70ep79uayknz"
+      procédure privée _encodeTabIntBech32( sPréfixe chaine, tabInt5Data est tableau d'entier ) : chaine
+      
+      
+      // calcul du CRC
+      bufCRC est un buffer  = _sCalcCRC(sPréfixe, tabInt5Data )
+      
+      // calcul résultat finale
+      résultat est une chaîne = sPréfixe + "1"
+      résultat += _TabIntVersChainEncodee(tabInt5Data)
+      résultat += bufCRC
+      
+      renvoyer résultat
+     type : 458752
+   -
+     name : _decodeBenche32toTabInt
+     procedure_id : 2086874186507585663
+     type_code : 15
+     code : |1+
+      // décode une chaine au format bech32, version interne
+      // renvoie (OK, préfixe, tableau des entiers 5 bits, erreur)
+      Procédure _decodeBenche32toTabInt( chaineADécoder chaine) : (booléen, chaine, tableau d'entier, chaine )
+      
+      tabVide est tableau d'entier
+      
+      // extrait le préfixe
+      // ex : bc1zw508d6qejxtdg4y5r3zarvaryvg6kdaj => bc
+      nPosSéparateur est entier = Position(chaineADécoder,"1",0,DepuisFin)
+      SI nPosSéparateur=0 ALORS
+      	RENVOYER (Faux, "", tabVide, <§@1cefe3cc0393f81e0000§> )
+      FIN
+      sPréfixe est chaine = gauche(chaineADécoder, nPosSéparateur-1)
+      // valide le préfixe
+      SI sPréfixe="" ALORS
+      	RENVOYER (Faux, "", tabVide, <§@1cefe3cc0393f81e0001§> )
+      FIN
+      si taille(sPréfixe)>83 ALORS
+      	RENVOYER (Faux, "", tabVide, <§@1cefe3cc0393f81e0009§> )
+      FIN
+      // tous les caractères doivent être entre 33 et 126
+      POUR I = 1 _a_ taille(sPréfixe)
+      	nAsc est entier = asc(sPréfixe[I])
+      	si PAS 33<=nAsc<=126 ALORS
+      		RENVOYER (Faux, "", tabVide, ChaîneConstruit( <§@1cefe3cc0393f81e000a§>, I, caract(nAsc), nAsc)) 
+      	FIN
+      FIN
+      // on vérifie que se n'est pas un mélange de case MAJ/min
+      si Minuscule(chaineADécoder)<>chaineADécoder alors
+      	SI Majuscule(chaineADécoder)<>chaineADécoder ALORS
+      		RENVOYER (Faux, "", tabVide,<§@1cefe3cc0393f81e000b§>)
+      	fin
+      fin
+      
+      
+      // extrait le suffixe avec les données
+      // ex : bc1zw508d6qejxtdg4y5r3zarvaryvg6kdaj => zw508d6qejxtdg4y5r3zarvaryvg6kdaj
+      sSousPartieData est chaine =  Milieu(chaineADécoder, nPosSéparateur+1)
+      SI taille(sSousPartieData)<6 ALORS
+      	RENVOYER (Faux, "", tabVide,"format invalide : données trop courtes")
+      FIN
+      // on force en minuscules. 
+      sPréfixe 		= Minuscule(sPréfixe)
+      sSousPartieData = Minuscule(sSousPartieData)
+      
+      // décodage 
+      soit (bOk, tabInt5Data, sErreur) = _ChainEncodeeVersTabEntier5bits( sSousPartieData  ) 
+      si pas bOk ALORS
+      	// Erreur
+      	RENVOYER (Faux, "", tabInt5Data, sErreur)
+      FIN
+      
+      // SUCCES 
+      renvoyer (vrai,sPréfixe, tabInt5Data, "" )
+      
+      
+     type : 458752
+   -
+     name : _bVerifieChechsum
+     procedure_id : 2086872593074544252
+     type_code : 15
+     code : |1-
+       procédure privée _bVerifieChechsum(  sPréfixe chaine, tabInt5Data est tableau d'entier   ) : booléen
+       
+       // bech32_polymod(bech32_hrp_expand(hrp) + data) == 1
+       
+       values  est tableau d'entier = _bech32_hrp_expand(sPréfixe) 
+       values.Ajoute( tabInt5Data )
+       
+       si  _bech32_polymod(values) = 1 ALORS
+       	renvoyer Vrai // OK
+       sinon
+       	renvoyer faux // pb de checksum
+       FIN
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : ProcéduresGlobales1
+resources :
+ string_res :
+  identifier : 0x1cefe3cc0393f81e
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+  strings :
+   -
+     text :
+      fr-FR : "format invalide : caractère séparateur '1' manquant"
+      en-GB : "format invalide : caractère séparateur '1' manquant"
+      es-ES : "format invalide : caractère séparateur '1' manquant"
+      ar-SA : "format invalide : caractère séparateur '1' manquant"
+     index : 0
+   -
+     text :
+      fr-FR : "format invalide : préfixe vide"
+      en-GB : "format invalide : préfixe vide"
+      es-ES : "format invalide : préfixe vide"
+      ar-SA : "format invalide : préfixe vide"
+     index : 1
+   -
+     text :
+      fr-FR : "format invalide : il manque un ou plusieurs caractères"
+      en-GB : "format invalide : il manque un ou plusieurs caractères"
+      es-ES : "format invalide : il manque un ou plusieurs caractères"
+      ar-SA : "format invalide : il manque un ou plusieurs caractères"
+     index : 2
+   -
+     text :
+      fr-FR : "format invalide au caractère n°%1 : '%2' ( %3 )"
+      en-GB : "format invalide au caractère n°%1 : '%2' ( %3 )"
+      es-ES : "format invalide au caractère n°%1 : '%2' ( %3 )"
+      ar-SA : "format invalide au caractère n°%1 : '%2' ( %3 )"
+     index : 3
+   -
+     text :
+      fr-FR : somme de contrôle invalide
+      en-GB : somme de contrôle invalide
+      es-ES : somme de contrôle invalide
+      ar-SA : somme de contrôle invalide
+     index : 4
+   -
+     text :
+      fr-FR : nombre de caractères trop petit
+      en-GB : nombre de caractères trop petit
+      es-ES : nombre de caractères trop petit
+      ar-SA : nombre de caractères trop petit
+     index : 5
+   -
+     text :
+      fr-FR : "format invalide : préfixe inconnu '%1'"
+      en-GB : "format invalide : préfixe inconnu '%1'"
+      es-ES : "format invalide : préfixe inconnu '%1'"
+      ar-SA : "format invalide : préfixe inconnu '%1'"
+     index : 6
+   -
+     text :
+      fr-FR : numéro de version de script invalide
+      en-GB : numéro de version de script invalide
+      es-ES : numéro de version de script invalide
+      ar-SA : numéro de version de script invalide
+     index : 7
+   -
+     text :
+      fr-FR : Taille de la partie programme invalide. 20 ou 32 octets sont les seules valeurs valides en version 0.
+      en-GB : Taille de la partie programme invalide. 20 ou 32 octets sont les seules valeurs valides en version 0.
+      es-ES : Taille de la partie programme invalide. 20 ou 32 octets sont les seules valeurs valides en version 0.
+      ar-SA : Taille de la partie programme invalide. 20 ou 32 octets sont les seules valeurs valides en version 0.
+     index : 8
+   -
+     text :
+      fr-FR : "format invalide : préfixe trop grand"
+      en-GB : "format invalide : préfixe trop grand"
+      es-ES : "format invalide : préfixe trop grand"
+      ar-SA : "format invalide : préfixe trop grand"
+     index : 9
+   -
+     text :
+      fr-FR : "format invalide au caractère n°%1 du préfixe : '%2' ( %3 )"
+      en-GB : "format invalide au caractère n°%1 du préfixe : '%2' ( %3 )"
+      es-ES : "format invalide au caractère n°%1 du préfixe : '%2' ( %3 )"
+      ar-SA : "format invalide au caractère n°%1 du préfixe : '%2' ( %3 )"
+     index : 10
+   -
+     text :
+      fr-FR : "format invalide : mélange minuscules/majuscules"
+      en-GB : "format invalide : mélange minuscules/majuscules"
+      es-ES : "format invalide : mélange minuscules/majuscules"
+      ar-SA : "format invalide : mélange minuscules/majuscules"
+     index : 11
+   -
+     text :
+      fr-FR : Taille de la partie programme invalide. Elle doit être comprise entre 2 et 40.
+      en-GB : Taille de la partie programme invalide. Elle doit être comprise entre 2 et 40.
+      es-ES : Taille de la partie programme invalide. Elle doit être comprise entre 2 et 40.
+      ar-SA : Taille de la partie programme invalide. Elle doit être comprise entre 2 et 40.
+     index : 12
+   -
+     text :
+      fr-FR : "format invalide : partie programme vide"
+      en-GB : "format invalide : partie programme vide"
+      es-ES : "format invalide : partie programme vide"
+      ar-SA : "format invalide : partie programme vide"
+     index : 13
+   -
+     text :
+      fr-FR : "format invalide : mauvais nombre de caractères"
+      en-GB : "format invalide : mauvais nombre de caractères"
+      es-ES : "format invalide : mauvais nombre de caractères"
+      ar-SA : "format invalide : mauvais nombre de caractères"
+     index : 14
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

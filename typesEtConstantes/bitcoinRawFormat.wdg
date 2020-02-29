@@ -1,0 +1,280 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : bitcoinRawFormat
+ major_version : 25
+ minor_version : 0
+ type : 7
+ description : ""
+ subtype : 0
+procedure_set :
+ identifier : 0x1a916d45016fc634
+ internal_properties : BQAAAAUAAABGLu41kG7fjQV3iS4F72qmnKaNh5694reolNKIW0iw
+ code_elements :
+  type_code : 31
+  p_codes :
+   -
+     code : |1+
+      CONSTANT
+      	// format de sérialisation des objets échangé par le noeud bitcoin :
+      	// source : https://en.bitcoin.it/wiki/Protocol_documentation
+      	
+      	// entetes
+      	sFormatHeader = [
+      		4: magic	 	:uint32	  	:Magic value indicating message origin network, and used to seek to next message when stream state is unknown
+      		12:command	 	:char[]		:ASCII string identifying the packet content, NULL padded (non-NULL padding results in packet rejected)
+      		4: length 		:uint32		:Length of payload in number of bytes
+      		4: checksum	:uint32		:First 4 bytes of sha256(sha256(payload))
+      		?: payload	 	:uchar[]		:The actual data
+      		
+      	]
+      	sFormatVersion  = [
+      		4:	version		:int32		:Identifies protocol version being used by the node
+      		8:	services		:uint64	:bitfield of 	features to be enabled for this connection
+      		8:	timestamp		:int64		:standard UNIX timestamp in seconds
+      		26:	addr_recv		:net_addrV	:The network address of the node receiving this message
+      		26:	addr_from		:net_addrV	:The network address of the node emitting this message
+      		8:	nonce			:uint64		:Node random nonce, randomly generated every time a version packet is sent. This nonce is used to detect connections to self.
+      		?:	user_agent		:var_str	:User Agent (0x00 if string is 0 bytes long)
+      		4:	start_height	:int32		:The last block received by the emitting node
+      		1:	relay			:bool		:Whether the remote peer should announce relayed transactions or not, see BIP 0037
+      	]
+      	sFormatNetAddrV  = [
+      		//	4 :	time			:uint32		:the Time (version >= 31402). Not present in version message.
+      		8 :	services		:uint64		:same service(s) listed in version
+      		// The original client only supported IPv4 and only read the last 4 bytes to get the IPv4 address. 
+      		// However, the IPv4 address is written into the message as a 16 byte IPv4-mapped IPv6 address (12 bytes 00 00 00 00 00 00 00 00 00 00 FF FF, followed by the 4 bytes of the IPv4 address).
+      		16:	IPv6_4			:ipv6_4		:IPv6 address. Network byte order.
+      		2 :	port			:uint16		:port number, network byte order
+      	]
+      	sFormatPing = [
+      		8 :	nonce			:uint64		:random nonce
+      	]
+      	sFormatGetblocks = [
+      		4 :	version					:uint32	:the protocol version
+      		? :	hash_count				:var_int		 	:number of block locator hash entries
+      		? :	block_locator_hashes 	:hash[hash_count]	:block locator object: newest back to genesis block (dense to start, but then sparse)
+      		32:	hash_stop				:hash				:hash of the last desired block; set to zero to get as many blocks as possible (500)
+      		
+      	]
+      	sFormatGetheaders = [
+      		4 :	version					:uint32				:the protocol version
+      		? :	hash_count				:var_int			:number of block locator hash entries
+      		? :	block_locator_hashes 	:hash[hash_count]	:block locator object: newest back to genesis block (dense to start, but then sparse)
+      		32:	hash_stop				:hash				:hash of the last desired block; set to zero to get as many blocks as possible (500)
+      	]
+      
+      	sFormatInv = [
+      		?:	count					:var_int	 :Number of inventory entries
+      		?:	inventory				:inv_vect[]:Inventory vectors
+      	]	
+      		
+      	sFormatInventoryVector = [
+      		4 :	type	:uint32	:Identifies the object type linked to this inventory
+      		32:	hash	:hash		:Hash of the object
+      	]	
+      	
+      	sFormatReject = [
+      		?:	message:var_str	:type of message rejected
+      		1:	ccode	:uint8		:code relating to rejected message
+      		?:	reason	:var_str	:text version of reason for rejection
+      		?:	data	:uchar[]	:Optional extra data provided by some errors. Currently,  fill it with the TXID or block header hash of the object being rejected,
+      	]
+      	sFormatHeaders = [
+      		? :	count	:var_int		:Number of block headers
+      		?:	headers:block_header[]	:Block headers
+      	]
+      	
+      	sFormatBlockHeader = [
+      		4	:version			:int32		:Block version information (note, this is signed)
+      		32	:prev_block			:hash		:The hash value of the previous block this particular block references
+      		32	:merkle_root		:hash  		:The reference to a Merkle tree collection which is a hash of all transactions related to this block
+      		4	:timestamp			:uint32		:A Unix timestamp recording when this block was created (Currently limited to dates before the year 2106!)
+      		4	:bits				:uint32		:The calculated difficulty target being used for this block
+      		4	:nonce				:uint32		:The nonce used to generate this block… to allow variations of the header and compute different hashes
+      		?	:txn_count			:var_int	:Number of transaction entries
+      	]
+      	
+      	sFormatBlock = [
+      		?	:header				:blockHeader   :Block Header
+      		?	:txns				:tx[]		   :Block transactions, in format of "tx" command
+      	]
+      	
+      	sFormatTxPlusWt = [
+      		4:	version				:int32			:Transaction data format version (note, this is signed)
+      		?:	flag				:optional_0001	:uint8[2]	If present, always 0001, and indicates the presence of witness data
+      		?:	tx_in_count			:var_int		:Number of Transaction inputs (never zero)
+      		?:	tx_in				:tx_in[]		 :A list of 1 or more transaction inputs or sources for coins
+      		?:	tx_out_count		:var_int		 :Number of Transaction outputs
+      		?:	tx_out				:tx_out[]		 :A list of 1 or more transaction outputs or destinations for coins
+      		?:	tx_witnesses		:tx_witness[]	 :A list of witnesses, one for each input; omitted if flag is omitted above
+      		4:	lock_time			:uint32		 :The block number or timestamp at which this transaction is unlocked:
+      		//	Value	Description
+      		//	0	Not locked
+      		//	< 500000000	Block number at which this transaction is unlocked
+      		//	>= 500000000	UNIX timestamp at which this transaction is unlocked
+      	//	If all TxIn inputs have final (0xffffffff) sequence numbers then lock_time is irrelevant. Otherwise, the transaction may not be added to a block until after lock_time (see NLockTime).
+      	]
+      	
+      	sFormatTx = [
+      		4:	version			:int32			 :Transaction data format version (note, this is signed)
+      		?:	tx_in_count		:var_int		 :Number of Transaction inputs (never zero)
+      		?:	tx_in				:tx_in[]		 :A list of 1 or more transaction inputs or sources for coins
+      		?:	tx_out_count		:var_int		 :Number of Transaction outputs
+      		?:	tx_out				:tx_out[]		 :A list of 1 or more transaction outputs or destinations for coins
+      		4:	lock_time			:uint32		 :The block number or timestamp at which this transaction is unlocked:
+      	]
+      	
+      	sFormatTxIn = [
+      		36:	previous_output:	outpoint				:The previous output transaction reference, as an OutPoint structure
+      		?:script_length	 :	var_int				:The length of the signature script
+      		?:signature_script:	uchar[script_length]	:Computational Script for confirming transaction authorization
+      		4:sequence			:	uint32					:Transaction version as defined by the sender. Intended for "replacement" of transactions when information is updated before inclusion into a block.
+      	]
+      	
+      	sFormatOutPoint = [
+      		32:	hash	:hash	:The hash of the referenced transaction.
+      		4:	index	:uint32:The index of the specific output in the transaction. The first output is 0, etc
+      	]
+      	
+      	sFormatTxOut = [
+      		8 :value				:int64	  					:Transaction Value
+      		? :pk_script_length		:var_int 					:Length of the pk_script
+      		? :pk_script			:uchar[pk_script_length] 	:Usually contains the public key as a Bitcoin script setting up conditions to claim this output.
+      	]
+      	sFormatTxWitness = [
+      		? :count			:var_int 	    : count of witness data components
+      		? :WitnesseArray	:wt[] 			: array  of witness data components
+      	]
+      	sFormatWtElement = [
+      		? :len		:var_int 	: length of the component data
+      		? :data		:uchar[len]	: raw component datat  
+      	]
+      	
+      FIN
+      CONSTANT
+      	//n° magique a mettre dans les entêtes de message pour ne pas mélanger les réseaux
+      	nMAGIC_Main 	= 0xD9B4BEF9
+      	nMAGIC_TestNet 	= 0x0709110B
+      	nMAGIC_SimNet	= 0x12141c16
+      	nMAGIC_Namecoin	= 0xFEB4BEF9
+      	
+      	// n° de port par défaut selon le réseau
+      	nPORT_Main 	  =  8333
+      	nPORT_TestNet = 18333
+      	nPORT_SimNet  = 18555
+      	// n° de version annoncé au peer
+      	// voir https://bitcoin.org/en/developer-reference
+      	nVERSION_OUT  =   70012 // 70015
+      FIN
+      
+      public
+      
+      
+      
+      // init objets de conversion bin<=>variant
+      gcConvHeader  		  est binBuffer(sFormatHeader)
+      gcConvVersion 		  est binBuffer(sFormatVersion)
+      gcConvNetAdd  		  est binBuffer(sFormatNetAddrV)
+      gcConvPing		 	  est binBuffer( sFormatPing )	
+      gcConvGetBloks 		  est binBuffer( sFormatGetblocks )	
+      gcConvGetheaders	  est binBuffer( sFormatGetheaders )	
+      gcConvHeaders		  est binBuffer( sFormatHeaders )	
+      gcConvInventoryVector est binBuffer( sFormatInventoryVector )	
+      gcConvInv  			  est binBuffer( sFormatInv )	
+      gcConvNotFound		  est binBuffer( sFormatInv ) // meme format que inv
+      gcConvReject  		  est binBuffer( sFormatReject )	
+      gcConvGetData 		  est binBuffer( sFormatInv )	
+      gcConvBlockHeader	  est binBuffer( sFormatBlockHeader )	
+      gcConvBlock 		  est binBuffer( sFormatBlock )	
+      gcConvTx	 		  est binBuffer( sFormatTx )	
+      gcConvTxPlusWt		  est binBuffer( sFormatTxPlusWt )	 //@TEST
+      gcConvTxIn	 		  est binBuffer( sFormatTxIn )	
+      gcConvOutPoint 		  est binBuffer( sFormatOutPoint )	
+      gcConvTxOut	 		  est binBuffer( sFormatTxOut )	
+      gcConvWitness		  est binBuffer( sFormatTxWitness )	
+      gcConvWitnessElement  est binBuffer( sFormatWtElement )	
+      
+      // Ajout des sous-type
+      gcConvBlock.addType(       "blockHeader", 		gcConvBlockHeader )
+      gcConvBlock.addTypeArray(  "tx[]",   	 		gcConvTx			 , "header.txn_count" )
+      gcConvInv.addTypeArray(    "inv_vect[]", 		gcConvInventoryVector, "count" )	
+      gcConvGetData.addTypeArray("inv_vect[]", 		gcConvInventoryVector, "count" )	
+      gcConvNotFound.addTypeArray("inv_vect[]", 		gcConvInventoryVector, "count" )	
+      gcConvHeaders.addTypeArray("block_header[]",	gcConvBlockHeader,	   "count" )	
+      
+      gcConvTx.addTypeArray(	   "tx_in[]", 			gcConvTxIn,			   "tx_in_count" )	
+      gcConvTx.addTypeArray(	   "tx_out[]", 		gcConvTxOut,		   "tx_out_count" )	
+      gcConvTx.addTypeArray(	   "tx_witness[]",	gcConvWitness,	     	"flag" )	//@Hack
+      gcConvTxPlusWt.addTypeArray("tx_in[]", 		gcConvTxIn,			"tx_in_count" )	
+      gcConvTxPlusWt.addTypeArray("tx_out[]", 		gcConvTxOut,		"tx_out_count" )	
+      gcConvTxPlusWt.addTypeArray("tx_witness[]",	gcConvWitness,	    "flag" )	
+      
+      gcConvWitness.addTypeArray("wt[]",			    gcConvWitnessElement,	"count" )	
+      gcConvTxIn.addType(		   "outpoint",			gcConvOutPoint)	
+      
+      // Ajout de la convertion net_addrV<=>bin
+      gcConvNetAdd.addConverter("ipv6_4", ipv6_4V2bin, bin2ipv6_4V2)
+      	PROCÉDURE INTERNE ipv6_4V2bin(  var )
+      	// conv de 18.67.146.5 en buffer
+      	sIP est une chaîne  = var
+      	sRes est un Buffer = Répète(Caract(0),12)
+      	sRes += Caract(0xFF)
+      	sRes += Caract(0xFF)
+      	POUR i=1 À 4
+      		nPart est entier = ExtraitChaîne(sIP,i,".")
+      		sRes += Caract(nPart)
+      	FIN
+      	RENVOYER  sRes
+      	FIN// net_addrV2bin
+      	PROCÉDURE INTERNE bin2ipv6_4V2( s Buffer, variantOut ) : entier
+      	// IPV4 
+      	variantOut = "" 
+      	POUR i = 1 À 4
+      		variantOut += ["."] + Asc( s[[14+i]] )
+      	FIN
+      	RENVOYER 16
+      	FIN// net_addrV2bin	
+      
+      
+      // Ajout de la conversion net_addrV<=>bin
+      gcConvVersion.addConverter("net_addrV", net_addrV2bin, net_bin2addr )
+      	PROCÉDURE INTERNE net_addrV2bin( var )
+      	RENVOYER gcConvNetAdd.variantToBin( var )
+      	FIN// net_addrV2bin
+      	PROCÉDURE INTERNE net_bin2addr( s Buffer, variantOut ) : entier
+      	// on prend le début de s (anit assert buffer trop grand)
+      	sAddrBuf est un Buffer =Gauche(s,26)
+      	variantOut = gcConvNetAdd.binToVariant( sAddrBuf )
+      	RENVOYER 26
+      	FIN// net_addrV2bin
+      
+      // cas sur optional_0001 pour segwit
+      gcConvTx.addConverter("optional_0001", _flagToBIn , _binToFlag )
+      gcConvTxPlusWt.addConverter("optional_0001", _flagToBIn , _binToFlag )
+      	PROCÉDURE INTERNE _flagToBIn( var )
+      	sRes est un Buffer
+      	SI var = 0x100 ALORS
+      		sRes  = UI2ToBufferlowEndian(1)	
+      	FIN
+      	FIN
+      	PROCÉDURE INTERNE _binToFlag(  s Buffer, variantOut )
+      	nVal est un entier sur 2 = bufferToUI2LowEndian(s)
+      	SI nVal = 0x100 ALORS
+      		variantOut = 1
+      		RENVOYER 2
+      	FIN
+      	// witness non présent
+      	variantOut = 0
+      	RENVOYER 0 
+      	FIN
+     type : 720896
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : COL_SansNom1
+resources :
+ string_res :
+  identifier : 0x1a916d02016dbf92
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

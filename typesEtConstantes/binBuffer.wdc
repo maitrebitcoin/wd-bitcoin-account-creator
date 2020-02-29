@@ -1,0 +1,609 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : binBuffer
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1a06291e0126078e
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      // classe pour conversion de et vers un buffer binaire
+      // le format du binaire est décrite avec un chaine au format :
+      // <taille> :<nom> :<type>  :<taille>:<commentaire> + RC  +
+      // <taille2>:<nom2>:<type2>:<taille> + RC ...
+      // les lignes commencant par // son ignorée, permettant ainsi d'ajouter des commentaire
+      binBuffer est une Classe
+      	// format décodé
+      	m_TabFormat est un tableau de STFormat
+      	// convertisseur suppl. pour les type non géré.
+      	m_TabConvVar2Bin est un tableau associatif de procédures
+      	m_TabConvBin2Var est un tableau associatif de procédures
+      FIN
+      
+      // format pour un membre
+      STFormat est une structure
+      	ntaille  est entier // en octests. -1 pour "variable"
+      	snom 	 est chaîne
+      	stype 	 est chaine
+      	sComment est chaine
+      FIN
+      
+      constant
+      	// option
+      	OPT_defaut				   = 0		
+      	OPT_CompatVariantVersJSon  =  1 // convertion copartabile avec JSonVersVariant. buffer converti avec hex()
+      	OPT_RenvoieTailleLue	   =  2 // renvoie le nb d'octets décodés. 
+      fin
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 1875231503691483022
+     type_code : 27
+     code : |1+
+      // format du buffer
+      // <taille>:<nom>:<type>:<taille> + RC  +
+      // <nom>:<type>:<taille> + RC ...
+      PROCEDURE Constructeur(sformat est chaine)
+      /// ex :
+      //4: magic	 	:uint32_t  :Magic value indicating message origin network, and used to seek to next message when stream state is unknown
+      //12:command	:char[12]  :ASCII string identifying the packet content, NULL padded (non-NULL padding results in packet rejected)
+      
+      // ex :
+      POUR TOUTE CHAÎNE sFormatElemI DE sformat séparée par RC
+      	 // ignore les lignes vides et les commentaires
+      	si sFormatElemI = "" _ou_ Gauche(sFormatElemI,2) ="//" ALORS
+      		continuer
+      	FIN
+      	stFormI est STFormat
+      	sTaille est chaine  = _sNoTab(ExtraitChaîne(sFormatElemI,1,":"))
+      	si sTaille="?" alors
+      		stFormI.ntaille = -1
+      	sinon
+      		stFormI.ntaille = sTaille
+      		dbgAssertion(stFormI.ntaille>=1)
+      	FIN
+      	stFormI.snom    = _sNoTab(ExtraitChaîne(sFormatElemI,2,":"))
+      	stFormI.stype   = _sNoTab(ExtraitChaîne(sFormatElemI,3,":"))
+      	stFormI.sComment= ExtraitChaîne(sFormatElemI,4,":")
+      	
+      	TableauAjoute(m_TabFormat,stFormI)
+      FIN
+      
+      	// supprimer les espaces et les tab
+      	PROCEDURE INTERNE  _sNoTab(s chaine)
+      		sRes est chaine = SansEspace(s)
+      		sRes= Remplace(sRes, tab,"")
+      		sRes= SansEspace(sRes)
+      		renvoyer sRes
+      	FIN
+      
+      
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 1875231503691548558
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+      
+      
+       
+     type : 655360
+   -
+     name : _getDescJson
+     procedure_id : 1875231568116139081
+     type_code : 12
+     code : |1+
+      PROCEDURE _getDescJson( ) : chaîne
+      
+      sResJSon est une chaîne = "{" 
+      
+      sDQUOTE est chaine = """"
+      
+      //nPos est un entier // position dans le buffer
+      bPremier est un booléen =vrai
+      POUR TOUT stFormatI DE m_TabFormat
+      	// ajout d'un linge du genre :
+      	//	"services"=null",
+      	si pas bPremier ALORS
+      		sResJSon += ","
+      	FIN
+      	sResJSon += RC + TAB + sDQUOTE + stFormatI.snom + sDQUOTE + ":null"
+      	//sResJSon += sDQUOTE + stFormatI.snom + sDQUOTE + ":null" //+ sDQUOTE + sDQUOTE
+      	bPremier = Faux
+      	//sortir
+      FIN
+      
+      sResJSon +=  "}" 
+      
+      renvoyer  sResJSon
+     type : 458752
+   -
+     name : binToVariant
+     procedure_id : 1875243555369965741
+     type_code : 12
+     code : |1+
+      
+      PROCEDURE binToVariant( sbuf buffer , option entier = OPT_defaut, nTailleLue_OUT est un entier = 0) 
+      
+      
+      clRes est variant
+      
+      QUAND EXCEPTION
+      	dbgAssertion(faux,ExceptionInfo(errComplet))
+      	renvoyer null	
+      	
+      FIN
+      
+      
+      // cas buffer vide
+      si sbuf="" ALORS
+      	renvoyer clRes
+      FIN
+      
+      // créer
+      sJson est chaine = _getDescJson()
+      clRes = JSONVersVariant(sJson)
+      
+      
+      sbufRestant est un buffer = sbuf
+      nLuTotal est un entier = 0
+      POUR TOUT stFormatI DE m_TabFormat
+      	
+      	// memebre dans lequel écrire
+      	soit pvarI  <-  {"clRes." + stFormatI.snom,indVariable }
+      	//dbgAssertion(pvarI<>null, "<"+ stFormatI.snom + "> non trouvé")
+      	
+      	// lecture du buffer
+      	nLu est un entier  
+      	nLu = _nbuffer2variantI(sbufRestant, stFormatI, option, clRes, pvarI )
+      	dbgAssertion(nLu >= 0)
+      	dbgAssertion(nLu <= taille(sbufRestant), "buffer pas assez grand pour ce qu'on devait y lire" )
+      	nLuTotal += nLu
+      		
+      	// calcul du buffer restant a lire
+      	sbufRestant = Milieu(sbufRestant, nLu + 1)
+      fin
+      si option = OPT_RenvoieTailleLue ALORS
+      	nTailleLue_OUT = nLuTotal
+      sinon
+      	dbgAssertion(sbufRestant="","buffer trop grand (pas lu en entier)")
+      fin
+      
+      renvoyer clRes
+      
+     type : 458752
+   -
+     name : _svariant2bufferI
+     procedure_id : 1875364570368624539
+     type_code : 12
+     code : |1+
+      PROCEDURE _svariant2bufferI(var, stFormat est STFormat) : buffer
+      
+      sBufRes est un buffer
+      
+      selon stFormat.stype
+      	CAS "uint8"
+      		nResUI1 est un entier sans signe sur 1 = var
+      		sBufRes = caract( nResUI1 )
+      	cas "uint16"
+      		nResUI2 est un entier sans signe sur 2 = var
+      		sBufRes = Répète(Caract(0),2)
+      		Transfert(&sBufRes,&nResUI2,2)		
+      	cas "uint32":
+      		nResUI4 est un entier sans signe sur 4 = var
+      		sBufRes = Répète(caract(0),4)
+      		Transfert(&sBufRes,&nResUI4,4)
+      	CAS "uint64":
+      		nResUI8 est un entier sans signe sur 8 = var
+      		sBufRes = Répète(Caract(0),8)
+      		Transfert(&sBufRes,&nResUI8,8)
+      	CAS "int32":
+      		//nResI4 est un entier sur 4 = var
+      		sBufRes = I4ToBufferLowEndian( var )
+      		//Transfert(&sBufRes,&nResI4,4)		
+      	CAS "int64":
+      		nResI8 est un entier sur 8 = var
+      		sBufRes = Répète(Caract(0),8)
+      		Transfert(&sBufRes,&nResI8,8)				
+      	cas "bool"
+      		bResBool est un entier sur 1
+      		sBufRes = Répète(Caract(0),1)
+      		Transfert(&sBufRes,&bResBool,1)
+      	cas "var_str"
+      		// chaine précédée par sa taille 
+      		sBufRes = _sVarStrVersBuffer( var )
+      	cas "var_int"
+      		nResI8 est un entier sur 8 = var
+      		sBufRes = _sVariableLengthI8ToBuffer(var)
+      		
+      	cas "char[]" // chaine taille fixe
+      		dbgAssertion( stFormat.ntaille >0 ) 
+      		sResStr est chaine ANSI = var
+      		sBufRes = gauche(sResStr, stFormat.ntaille)
+      		sBufRes = Complète(sBufRes,stFormat.ntaille,caract(0))
+      		dbgAssertion( stFormat.ntaille = taille(sBufRes) ) 
+      	cas "hash" // hash en low endian sur 256
+      		dbgAssertion( stFormat.ntaille = 32 ) 
+      		dbgAssertion( taille(var)= 32 ) 
+      		sBufRes = var // bufferReverseEndian((var))
+      		
+      	CAS "uchar[]"
+      		sBufRes = var
+      	cas "hash[hash_count]" // @Hack
+      		pour i = 1 a var..Occurrence
+      			sBufRes += var[i]
+      		fin
+      		
+      	CAS "uchar[pk_script_length]" //@Hack
+      		sBufRes = var
+      	CAS "uchar[script_length]" //@Hack
+      		sBufRes = var		
+      	AUTRE CAS
+      		// on rech un convertisseur
+      		pConvVar2Buf est une procédure = m_TabConvVar2Bin[ stFormat.stype ]
+      		si pConvVar2Buf = null
+      			dbgAssertion(faux, stFormat.stype )
+      			renvoyer sBufRes // echce
+      		fin
+      		// -- appel procédure suppl.
+      		// pour un tableau on passe le parent (permet d'avoir le nb. d'éléments)
+      		SI Droite(stFormat.stype,1="]") ALORS
+      			///@
+      			
+      			sBufRes = pConvVar2Buf( var )  
+      		sinon		
+      			sBufRes = pConvVar2Buf( var )
+      		fin
+      		
+      FIN
+      
+      renvoyer sBufRes
+     type : 458752
+   -
+     name : _nbuffer2variantI
+     procedure_id : 1875506677963990857
+     type_code : 12
+     code : |1+
+      procédure _nbuffer2variantI( s est buffer,  format est STFormat, option entier,  clParent, pVarOut ) : entier
+      
+      tailleLue est un entier
+      nResI8 est un entier sur 8 
+      			
+      SELON format.stype
+      	CAS "uint8"
+      		nResUI1 est un entier sans signe sur 1 
+      		nResUI1 = asc( s[[1]] )
+      		pVarOut = nResUI1
+      		RENVOYER 1 // 1 octets lu
+      			
+      	CAS "uint16"
+      		nResUI2 est un entier sans signe sur 2 
+      		Transfert(&nResUI2,&s,2)		
+      		pVarOut = nResUI2
+      		renvoyer 2 // 2 octets lu
+      	CAS "uint32":
+      		nResUI4 est un entier sans signe sur 4 = bufferToUI4LowEndian(s)
+      
+      		//Transfert(&nResUI4,&s,4)		
+      		pVarOut = nResUI4
+      		renvoyer 4
+      	CAS "uint64":
+      		nResUI8 est un entier sans signe sur 8 = bufferToUI8LowEndian(s)
+      		//Transfert(&nResUI8,&s,4)		
+      		pVarOut = nResUI8
+      		renvoyer 8
+      	CAS "int32":
+      		nResI4 est un entier sur 4 //= bufferToUI4LowEndian(s)
+      		Transfert(&nResI4,&s,4)		//@OPTIM
+      		pVarOut = nResI4
+      		RENVOYER 4	
+      	CAS "int64":
+      		 nResI8 = bufferToI8LowEndian(s)
+      		pVarOut = nResI8
+      		RENVOYER 8				
+      	CAS "bool"
+      		nResI1 est un entier sur 1
+      		Transfert(&nResI1,&s,4)		
+      		bResBool est un booléen = nResI1
+      		pVarOut = bResBool
+      		RENVOYER 1	
+      	CAS "var_str"
+      		sStr est chaine ansi 
+      	
+      		(sStr , tailleLue ) = _sBufferVersStr( s )
+      		pVarOut =  sStr
+      		RENVOYER tailleLue
+      	cas "var_int"
+      		//nResI8 est un entier sur 8 
+      		(nResI8, tailleLue ) = _BufferToVariableLengtI8( s )
+      		pVarOut =  nResI8 
+      		RENVOYER tailleLue
+      	CAS "char[]" // chaine taille fixe
+      		dbgAssertion( format.ntaille >0 ) 
+      		sResStr est chaine ANSI = Gauche(s,format.ntaille)
+      		pVarOut = sResStr
+      		renvoyer format.ntaille
+      	CAS "hash" // hash en low endian sur 256
+      		 dbgAssertion( format.ntaille = 32 ) 
+      		 dbgAssertion( taille(s) >= 32 ) 
+      		 shash32 est buffer = Gauche(s, 32)
+      		SI option  = OPT_CompatVariantVersJSon
+      			pVarOut =  BufferVersHexaSansEspace(shash32)
+      		SINON
+      		 	pVarOut = shash32 // bufferReverseEndian((shash32))
+      		fin
+      		renvoyer 32
+      	// 		
+      	CAS "uchar[]" 
+      		si option  = OPT_CompatVariantVersJSon
+      			pVarOut =BufferVersHexaSansEspace(s)
+      		sinon
+      			pVarOut = s // hex(s)
+      		fin
+      		renvoyer taille(s) // tout le reste du buffer
+      	cas "hash[hash_count]" // @Hack pour sFormatGetblocks 
+      		nbHash est entier = clParent.hash_count
+      		dbgAssertion( Taille(s) >= 32 * nbHash ) 
+      		pour i = 1 a nbHash
+      			// découpe par bloc de 32
+      			offset est entier = (i-1)*32
+      			pVarOut[i] = s[[ offset+1 a offset+32 ]]
+      			dbgAssertion( taille(pVarOut[i]) = 32 )
+      		FIN
+      		RENVOYER 32 * nbHash
+      	AUTRE CAS
+      		// car buffer dont la taille dépend d'un param précédent
+      		// ex : "uchar[count]" => count
+      		SI gauche(format.stype,6)="uchar[" ALORS
+      			sNomMembre est chaine = milieu(format.sType,7,taille(format.stype)-7)
+      			// récup de la taille dans le variant parent en cours de construction
+      			nTaille est entier = {"clParent." + sNomMembre, indVariable }
+      			pVarOut = Gauche(s, nTaille )
+      			renvoyer nTaille 
+      		FIN
+      		
+      		// on rech un convertisseur
+      		pConvBuf2var est une procédure 
+      		QUAND EXCEPTION DANS
+      			pConvBuf2var = m_TabConvBin2Var[ format.stype ]
+      		FAIRE
+      			dbgAssertion(Faux, format.stype + rc + ExceptionInfo() )
+      		FIN
+      	
+      		SI pConvBuf2var = Null
+      			dbgAssertion(Faux, format.stype )
+      			RENVOYER 0 // echec
+      		FIN
+      		// -- appel procédure suppl.
+      			
+      		// pour un tableau on passe le parent (permet d'avoir le nb. d'éléments)
+      		si droite(format.stype,2)="[]" alors
+      			RENVOYER pConvBuf2var( s, clParent, pVarOut )  
+      		FIN
+      		
+      		renvoyer pConvBuf2var( s, pVarOut )
+      		
+      FIN
+      
+      RENVOYER tailleLue
+     type : 458752
+   -
+     name : _sVarStrVersBuffer
+     procedure_id : 1875475960352638096
+     type_code : 12
+     code : |1+
+      // convertion d'une chaine Ansi en un buffer avec la taille compressée en entete
+      procédure _sVarStrVersBuffer( local str chaine ANSI   ) : buffer
+      
+      sBufRes est un buffer 
+      // taille, encodée en Variable length integer
+      sBufRes  = _sVariableLengthI8ToBuffer( taille(str) )
+      sBufRes += str
+      
+      
+      renvoyer sBufRes
+      
+     type : 458752
+   -
+     name : _sVariableLengthI8ToBuffer
+     procedure_id : 1875477021209611007
+     type_code : 12
+     code : |1-
+      // encodage sur un nombre d'octects variable de n. en little endian
+      // voir https://en.bitcoin.it/wiki/Protocol_documentation
+      procédure globale _sVariableLengthI8ToBuffer( local n est entier sans signe sur 8 ) : buffer
+      
+      sBufRes est un buffer = caract(0)
+      si n < 0xFD alors
+      	sBufRes = caract(n)
+      	renvoyer sBufRes
+      FIN
+      SI n < 0xFFFF ALORS
+      	nResUI2 est un entier sans signe sur 2 = n
+      	sBufUI2 est buffer= Répète(Caract(0),2)
+      	Transfert(&sBufUI2,&nResUI2,2)	
+      	sBufRes = Caract(0xFD) + sBufUI2
+      	dbgAssertion(taille(sBufRes) = 3)
+      	RENVOYER sBufRes
+      FIN
+      SI n < 0xFFFFFFFF ALORS
+      	nResUI4 est un entier sans signe sur 4 = n
+      	sBufUI4 est buffer= Répète(Caract(0),4)
+      	Transfert(&sBufUI4,&nResUI4,4)	
+      	sBufRes = Caract(0xFE) + sBufUI4	
+      	dbgAssertion(Taille(sBufRes) = 5)
+      	RENVOYER sBufRes
+      FIN
+      // cas n > 0xFFFF FFFF
+      nResUI8 est un entier sans signe sur 8 = n
+      sBufUI8 est buffer= Répète(Caract(0),8)
+      Transfert(&sBufUI8,&nResUI8,8)	
+      sBufRes = Caract(0xFF) + sBufUI8
+      dbgAssertion(Taille(sBufRes) = 9)
+      RENVOYER sBufRes
+     type : 458752
+   -
+     name : addConverter
+     procedure_id : 1875491048574951412
+     type_code : 12
+     code : |1+
+      // ajout d'une convertion de type de et vers le binaire
+      // <sbuffer> = procVarToBin( variant ) 
+      // <nTaille> = procBinToVar( sBuffer, variantOut  )
+      PROCEDURE addConverter( sType chaine, procVarToBin procédure, procBinToVar procédure )
+      
+      m_TabConvVar2Bin[sType] = procVarToBin
+      m_TabConvBin2Var[sType] = procBinToVar
+      
+      
+      
+     type : 458752
+   -
+     name : variantToBin
+     procedure_id : 1875498964202634474
+     type_code : 12
+     code : |1-
+      PROCEDURE variantToBin( var <utile> ) : buffer
+      
+      sBufRes est buffer
+      POUR TOUT stFormatI DE m_TabFormat
+      	//nTaille est un entier = stFormatI.ntaille
+      	soit varI  =  {"var." + stFormatI.snom,indVariable }
+      	dbgAssertion(varI<>null, "<"+ stFormatI.snom + "> non trouvé")
+      	// récup du sous-buffer pour ce memebre
+      	sSousBufI est un buffer = _svariant2bufferI(varI  , stFormatI)
+      		
+      	// ajout
+      	sBufRes += sSousBufI;
+      fin
+      
+      renvoyer sBufRes
+     type : 458752
+   -
+     name : _sBufferVersStr
+     procedure_id : 1875832648839183353
+     type_code : 12
+     code : |1+
+      // renvoie la chaine et la taille complete lue
+      procédure _sBufferVersStr( s Buffer  ) : (chaine ansi, entier )
+      
+      
+      // décodage de la taille de la chaine et de son offset par rapport au début du buffer
+      tailleStr est un entier
+      offset est un entier
+      (tailleStr, offset )  = _BufferToVariableLengtI8( s  )
+      // récup de la chaine
+      strRes est chaine ansi = milieu( s, offset + 1, tailleStr )
+      dbgActiveAssertion(taille(strRes) = tailleStr)
+      
+      renvoyer (strRes, tailleStr + offset)
+      
+     type : 458752
+   -
+     name : _BufferToVariableLengtI8
+     procedure_id : 1875833705401187124
+     type_code : 12
+     code : |1+
+      // encodage sur un nombre d'octects variable de n. en little endian
+      // voir https://en.bitcoin.it/wiki/Protocol_documentation
+      procédure _BufferToVariableLengtI8( s est un buffer ) : (entier sur 8,entier)
+      
+      n0 est entier sans signe = asc(s[[1]])
+      selon n0
+      	cas 0xFF // 8 octets
+      		resUI8 est un entier sans signe sur 8
+      		resUI8 = bufferToUI8LowEndian( milieu(s,2,8) )
+      		renvoyer (resUI8, 9)
+      	CAS 0xFE // 4 octets
+      		resUI4 est un entier sans signe sur 4
+      		resUI4 = bufferToUI4LowEndian( Milieu(s,2,4) )
+      		RENVOYER (resUI4, 5)		
+      	CAS 0xFD // 2 octets
+      		resUI2 est un entier sans signe sur 2
+      		resUI2 = bufferToUI2LowEndian( Milieu(s,2,2) )
+      		RENVOYER (resUI2, 3)				
+      	AUTRE CAS // 1 octets
+      		resUI1 est un entier sans signe = n0
+      		RENVOYER (resUI1, 1)	
+      FIN
+     type : 458752
+   -
+     name : addType
+     procedure_id : 1877971254860666961
+     type_code : 12
+     code : |1+
+      PROCEDURE addType( sNom chaine, clConverter est binbuffer )
+      
+      localConverter est binbuffer <- clConverter
+      // Ajout de la conversion blockHeader<=>bin
+      addConverter(sNom, _var2bin, _bin2var )
+      	PROCEDURE INTERNE _var2bin( var )
+      		RENVOYER localConverter.variantToBin( var )
+      	FIN// net_addrV2bin
+      	PROCEDURE INTERNE _bin2var( s buffer, variantOut ) : entier
+      		nTailleLue est un entier
+      		variantOut = localConverter.binToVariant( s, binBuffer::OPT_RenvoieTailleLue, nTailleLue  )
+      		RENVOYER nTailleLue
+      	FIN// net_addrV2bin
+     type : 458752
+   -
+     name : addTypeArray
+     procedure_id : 1877973045864346703
+     type_code : 12
+     code : |1+
+      PROCEDURE addTypeArray( sNom chaine, clConverter est binbuffer, local sNomCount chaine )
+      dbgAssertion(position(sNom,"[]") > 0)
+      
+      localConverter est binbuffer <- clConverter
+      // Ajout de la conversion blockHeader<=>bin
+      addConverter(sNom, _var2bin, _bin2var )
+      	PROCEDURE INTERNE _var2bin( var )
+      	sRes est un buffer
+      	POUR i = 1 _a_ var..Occurrence
+      		varI est un variant = var[i]
+      		sRes += localConverter.variantToBin( varI )
+      	FIN
+      	RENVOYER sRes 
+      	FIN// net_addrV2bin
+      	// 	
+      	PROCEDURE INTERNE _bin2var( s buffer, clParent <utile>,  variantOut ) : entier
+      	// buffer courant
+      	sSousBuf est un buffer = s
+      	tabRes est tableau de variant
+      	nMax est un entier = {"clParent." + sNomCount,indVariable} 
+      	nTailleLueTotal est entier = 0
+      	POUR i = 1 _a_ nMax
+      		// lecture élément I + récu taille lue
+      		varI est un variant
+      		nTailleLue est entier
+      		varI = localConverter.binToVariant( sSousBuf,binBuffer::OPT_RenvoieTailleLue, nTailleLue )
+      		// prend la suite du buffer
+      		nTailleLueTotal+=nTailleLue
+      		sSousBuf = Milieu(sSousBuf, nTailleLue+1)
+      		TableauAjoute(tabRes,varI)
+      	FIN
+      	variantOut = tabRes
+      	RENVOYER  nTailleLueTotal
+      	FIN// net_addrV2bin
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1a06290e0123ca28
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

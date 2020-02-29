@@ -1,0 +1,222 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : EnteteDeBloc
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1c8e0c0c56f91911
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      // base sur
+      //sFormatBlockHeader = [
+      //	4	:version			:int32		:Block version information (note, this is signed)
+      //	32	:prev_block			:hash		:The hash value of the previous block this particular block references
+      //	32	:merkle_root		:hash  		:The reference to a Merkle tree collection which is a hash of all transactions related to this block
+      //	4	:timestamp			:uint32		:A Unix timestamp recording when this block was created (Currently limited to dates before the year 2106!)
+      //	4	:bits				:uint32		:The calculated difficulty target being used for this block
+      //	4	:nonce				:uint32		:The nonce used to generate this block… to allow variations of the header and compute different hashes
+      //	?	:txn_count			:var_int	:Number of transaction entries
+      //]
+      
+      EnteteDeBloc est une Classe
+      	// info venant de bitcoin raw
+      	version		  est un entier
+      	prev_block	  est hash256
+      	merkle_root	  est hash256
+      	timestamp	  est entier sans signe sur 4 octet  // une dateheure encodée au format unix
+      	bits		  est entier sans signe sur 4 octets // difficulté (encodée)
+      	nonce		  est entier sans signe sur 4 octets // valeur qui prouve qu'on a dépensé plein d'énergie pour miner le bloc ( avec merkle_root qui sert d'extra-nonce )
+      
+      	//  cache du hash du bloc
+      	hash_cache	 est hash256 // id du block
+      	// -- info suppl
+      	nHauteurDansChaine est un entier // hauteur du bloc si dans la chaine principale.
+      FIN
+      
+      CONSTANT
+      	// taille en octet d'un entete de bloc
+      	nTAILLEBRUTE = 80
+      FIN
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 2057595326893267217
+     type_code : 27
+     code : |1+
+      PROCEDURE Constructeur()
+      
+      nHauteurDansChaine = 0
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 2057595326893332753
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+     type : 655360
+   -
+     name : initFromVariant
+     procedure_id : 2057595326893398289
+     type_code : 12
+     code : |1+
+      // init a partir d'un variat <scr> obtenu par la couche réseau raw
+      procédure initFromVariant( src,  format est FormaJSON = jsonNatif )
+      
+      // copie membre a membre
+      :version 	= src.version
+      selon format
+      	CAS jsonRPC
+      		// chaine hexa
+      		:prev_block.fromString( ( src.previousblockhash ) )
+      		:merkle_root.fromString( (src.merkleroot) )
+      		:bits 		= HexaVersEntier(src.bits )
+      	CAS jsonNatif
+      		// buffer bin direct, déja décodé
+      		//dbgAssertion(  TypeVar(src.prev_block) = wlBuffer )
+      		:prev_block.fromHashAsBuffer(  src.prev_block  )
+      		:merkle_root.fromHashAsBuffer( src.merkle_root )
+      		:bits 		= src.bits 
+      FIN
+      timestamp 	= src.timestamp 
+      //bits 		= src.bits 
+      nonce 		= src.nonce
+      InitHash()
+      
+     type : 458752
+   -
+     name : versBuffer
+     procedure_id : 2057595326893463825
+     type_code : 12
+     code : |1-
+      procédure versBuffer( ) : buffer
+      
+      
+      
+      bufHeader est un buffer 
+      bufHeader += I4ToBufferLowEndian(version)
+      bufHeader += prev_block.toBufferLowEndian()
+      bufHeader += merkle_root.toBufferLowEndian()
+      bufHeader += UI4ToBufferLowEndian(timestamp)
+      bufHeader += UI4ToBufferLowEndian(bits)
+      bufHeader += UI4ToBufferLowEndian(nonce)
+      dbgAssertion( Taille(bufHeader) = nTAILLEBRUTE)
+      //SI bFormatRéseau ALORS
+      //	dbgAssertion(:nbTransaction>0)
+      //	bufHeader += binBuffer::_sVariableLengthI8ToBuffer( :nbTransaction )
+      //FIN
+      
+      renvoyer bufHeader
+     type : 458752
+   -
+     name : InitHash
+     procedure_id : 2057595326893529361
+     type_code : 12
+     code : |1-
+      procédure InitHash()
+      
+      hash_cache  =  _hCalculeHash()
+     type : 458752
+   -
+     name : hash
+     procedure_id : 2057595326893594897
+     type_code : 12
+     code : |1+
+      procédure hash() : hash256
+      dbgAssertion(pas hash_cache.bEstZéro() )
+      
+      renvoyer hash_cache
+     type : 458752
+   -
+     name : _hCalculeHash
+     procedure_id : 2057595326893660433
+     type_code : 12
+     code : |1+
+      // calcul du hash id du bloc (fait sur l’entête uniquement)
+      Procédure privée _hCalculeHash() : hash256
+      
+      // récup du header a hasher au format brut
+      bufHeader est un buffer  = versBuffer()
+      // calcul du hash avec sha256( sha256() )
+      hRes est hash256
+      hRes.calcShaSha(bufHeader)
+      RENVOYER hRes
+     type : 458752
+   -
+     name : getdifficulté
+     procedure_id : 2057595326893725969
+     type_code : 12
+     code : |1+
+      // envoie la difficulté cible de minage du bloc
+      procédure getdifficulté() : DifficultéPow
+      
+      res est DifficultéPow
+      res.initDepuisEntete(:bits)
+      renvoyer res
+     type : 458752
+   -
+     name : getProofOfWork_OBSOLETE
+     procedure_id : 2057595326893791505
+     type_code : 12
+     code : |1-
+      
+     type : 458752
+   -
+     name : getdateheure
+     procedure_id : 2057595326893857041
+     type_code : 12
+     code : |1+
+      procédure getdateheure() : dateheure
+      
+      renvoyer unixUtcVersDate(timestamp)
+     type : 458752
+   -
+     name : SetNonce
+     procedure_id : 2057595326893922577
+     type_code : 12
+     code : |1+
+      procédure SetNonce( _nonce est entier )
+      
+      // Modif nonce
+      :nonce = _nonce
+      // recalculer le hash
+      InitHash()
+      renvoyer :hash_cache
+      
+      
+      
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1aca1908445a6432
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+  strings :
+   -
+     text :
+      fr-FR : L'empreinte (hash) du bloc ne correspond pas.
+      en-GB : L'empreinte (hash) du bloc ne correspond pas.
+      es-ES : L'empreinte (hash) du bloc ne correspond pas.
+      ar-SA : L'empreinte (hash) du bloc ne correspond pas.
+     index : 0
+   -
+     text :
+      fr-FR : "La preuve de travail sur le bloc est insuffisante. \r\n\r\nCondensat du  bloc (hash) > Valeur cible maximum : \r\n%1 \r\n%2\r\n\r\n\r\n"
+      en-GB : "La preuve de travail sur le bloc est insuffisante. \r\n\r\nCondensat du  bloc (hash) > Valeur cible maximum : \r\n%1 \r\n%2\r\n\r\n\r\n"
+      es-ES : "La preuve de travail sur le bloc est insuffisante. \r\n\r\nCondensat du  bloc (hash) > Valeur cible maximum : \r\n%1 \r\n%2\r\n\r\n\r\n"
+      ar-SA : "La preuve de travail sur le bloc est insuffisante. \r\n\r\nCondensat du  bloc (hash) > Valeur cible maximum : \r\n%1 \r\n%2\r\n\r\n\r\n"
+     index : 1
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

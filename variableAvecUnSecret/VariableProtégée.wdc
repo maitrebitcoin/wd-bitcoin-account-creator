@@ -1,0 +1,205 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : VariableProtégée
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1d9a2a24000514fa
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      VariableProtégée est une Classe
+      	PRIVÉ
+      		// valeur de la varible sérialisée et crypté
+      		valeurCryptée est buffer 
+      		// procédure qui renvoie la clé de cryptage. 
+      		// proto:
+      		//  PROCÉDURE MonDonneClé() : chaine 
+      		// NB n'est simplement une chaine pour 
+      		//-ne pas avoir le mdp juste a coté en mémoire
+      		//-permettre le stockage en dehors du processus ( (web)service, enclave, .ini crypté, etc...)
+      		pfDonneClé   est  procédure
+      
+      	
+      FIN
+      
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 2133063707620939002
+     type_code : 27
+     code : |1-
+      // Init avec la fonction renvoyant le mot de passe de cryptage
+      // Procédure _pfDonneClé() : chaine.
+      PROCEDURE Constructeur( _pfDonneClé   est une procédure = null )
+      
+      // si procéduré clé non fournis
+      si _pfDonneClé = Null ALORS
+      	// on prend la proc par défaut
+      	:pfDonneClé = pGetProcCléParDéfaut()
+      	
+      sinon
+      	:pfDonneClé = _pfDonneClé
+      fin
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 2133063707621004538
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+     type : 655360
+   -
+     name : getProcDonneClé
+     procedure_id : 2138120736535041145
+     type_code : 12
+     code : |1-
+      procédure getProcDonneClé() : procédure
+      renvoyer :pfDonneClé
+     type : 458752
+   -
+     name : bEstVide
+     procedure_id : 2138089356298737290
+     type_code : 12
+     code : |1-
+      procédure bEstVide()
+      
+      renvoyer :valeurCryptée= ""
+     type : 458752
+   -
+     name : SetValeurSecret
+     procedure_id : 2133064296031595882
+     type_code : 12
+     code : |1+
+      // sauver une valeur (on la cryptant)
+      Procédure SetValeurSecret( valeurSecrète )
+      
+      // calcul d'une clé de cryptage sur 256 bits dérivée de ce que renvoie pfDonneClé() car c'est que requiert CrypteStandard()
+      bufCle est un Buffer = HashChaîne(HA_SHA_256, pfDonneClé())
+      
+      // si <valeurSecrète> est une classe
+      si TypeVar(valeurSecrète ) = wlInstance ALORS
+      	// on sérialise <valeurSecrète> dans un buffer
+      	valeurSecrèteSérialiséé est un buffer
+      	Sérialise(valeurSecrète, valeurSecrèteSérialiséé,psdBinaire)
+      	bufCle = HashChaîne(HA_SHA_256, pfDonneClé())
+      	// on crypte ce buffer
+      	:valeurCryptée = CrypteStandard(  valeurSecrèteSérialiséé, bufCle, crypteAES256)
+      	// on s'assure que le buffer secret qui permettrait de retrouver <valeurSecrète> est effacé définitivement
+      	::DetruitSecret(valeurSecrèteSérialiséé)
+      sinon
+      	// type simple (chaine,buffer,  entier)
+      	bufCle  = HashChaîne(HA_SHA_256, pfDonneClé())
+      	:valeurCryptée = CrypteStandard(  valeurSecrète, bufCle, crypteAES256)
+      fin
+      
+      ::DetruitSecret(bufCle)
+     type : 458752
+   -
+     name : GetValeurSecret_ADetruireRapidement
+     procedure_id : 2133064983226457706
+     type_code : 12
+     code : |1+
+      // renvoyer la valeur en clair de la variable. 
+      //- ne pas sauver le résultat
+      //- appeller VariableProtégée::DetruitSecret() dès qu'on a fini de l'utiliser
+      procédure GetValeurSecret_ADetruireRapidement(valeurSecrète)
+      dbgAssertion(pas bestVide(), <§$0000§>)
+      
+      // calcul d'une clé de cryptage sur 256 bits dérivée de ce que renvoie pfDonneClé() car c'est que requiert DécrypteStandard()
+      Cle est chaine  = pfDonneClé()
+      bufCle est un Buffer = HashChaîne(HA_SHA_256, Cle)
+      ::DetruitSecret( Cle )
+      	
+      // si <valeurSecrète> est une classe
+      SI TypeVar(valeurSecrète ) = wlInstance ALORS
+      	// décryptage du buffer
+      	bufVar est un buffer
+      	bufVar = DécrypteStandard( :valeurCryptée,bufCle,crypteAES256)
+      	dbgAssertion(pas ErreurDétectée, ErreurInfo())
+      	// convertion en <valeurSecrète>
+      	Désérialise(valeurSecrète,bufVar,psdBinaire)
+      	::DetruitSecret(bufVar)
+      sinon
+      
+      	// décryptage du buffer
+      	valeurSecrète = DecrypteStandard( :valeurCryptée,bufCle,crypteAES256)
+      	dbgAssertion(PAS ErreurDétectée, ErreurInfo())
+      fin
+      ::DetruitSecret(bufCle)
+     type : 458752
+   -
+     name : DetruitSecret
+     procedure_id : 2133243297384633970
+     type_code : 12
+     code : |1+
+      // met des 0 dans une variable avec des infos secrètes pour être sur qu'elle ne sont plus en mémoire
+      //-Ils ne seront plus dans un dump mémoire (WL ou c++)
+      //-ils ne seront plus visible via un debugger 
+      // <valeurSecrète> peut être une classe WL, un buffer ou une chaine
+      procédure globale DetruitSecret( valeurSecrète ) 
+      
+      // si c'est une variable
+      SI TypeVar(valeurSecrète ) = wlInstance ALORS
+      	VariableRAZ(valeurSecrète)
+      	retour
+      FIN
+      // si c'est un buffer ou un chaine
+      SI    TypeVar(valeurSecrète ) = wlBuffer ...
+       _ou_ TypeVar(valeurSecrète ) = wlChaîneFixe ...
+       _ou_ TypeVar(valeurSecrète ) = wlChaîneASCIIZ ...
+       _ou_ TypeVar(valeurSecrète ) = wlChaîneBinaire ...
+       _ou_ TypeVar(valeurSecrète ) = wlChaîne ALORS
+      	bufferDe0 est un buffer = Répète(caract(0), Taille(valeurSecrète))
+      	Transfert(&valeurSecrète,&bufferDe0,Taille(valeurSecrète))
+      	retour
+      fin
+      dbgAssertion(Faux,"type non géré")
+     type : 458752
+   -
+     name : _pProcCléParDéfaut
+     procedure_id : 2137335035426569700
+     type_code : 12
+     code : |1-
+      // renvoie un procédure utilisable pour renvoyer une clé de décryptage
+      // correctement protégée par défaut.
+      procédure _pProcCléParDéfaut() : procédure
+      
+      // closure
+      ProcLocale est une procédure = pGetProcRenvoieSecret256bits()
+      	Procédure interne  _pGetClé() : chaine
+      		// récupérér le secret dans un buffer de 32 octets = 256 bits
+      		sSecret est un buffer = Répète("x",32)
+      		ProcLocale( sSecret)
+      		renvoyer sSecret
+      	fin
+      
+      renvoyer _pGetClé
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1d9a2a1e0002fc90
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+  strings :
+   -
+     text :
+      fr-FR : valeur non renseignée
+      en-GB : valeur non renseignée
+      es-ES : valeur non renseignée
+      ar-SA : valeur non renseignée
+     index : 0
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

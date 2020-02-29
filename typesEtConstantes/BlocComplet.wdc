@@ -1,0 +1,310 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : BlocComplet
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1c8e0b575627587a
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      BlocComplet est une Classe
+      	m_bufferBrut 	   est un buffer 						// buffer au format binaire (avec entête dans les 80 1er bits)
+      	m_entete 		   est un EnteteDeBloc 			    // entête du bloc
+      	m_clTabTransaction est un tableau de bitcoinTransaction // transactions du bloc
+      FIN
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 2057594549490440314
+     type_code : 27
+     code : |1+
+      PROCEDURE Constructeur()
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 2057594549490505850
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+      
+     type : 655360
+   -
+     name : construitDepuisJSON
+     procedure_id : 2057594549490571386
+     type_code : 12
+     code : |1+
+      // init a partir d'un buffer JSON au format RPC
+      procédure construitDepuisJSON( sJson est chaine, format est FormaJSON )
+      
+      // consersion en variant
+      var est un variant
+      var = JSONVersVariant(sJson)
+      
+      // Init entete
+      //bFormatRPC est un booléen = vrai
+      m_entete.initFromVariant( var, format )
+      // Init transaction
+      // ex :
+      // "tx": [
+      //	"4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"
+      // ],
+      POUR TOUT TxI DE var.tx 
+      	
+      	// conv en buffer
+      	sbufferTx est buffer =  HexaVersBuffer(TxI)
+      	clTxI est un bitcoinTransaction
+      	nTailleLueTx est un entier
+      	clTxI.fromBuffer( sbufferTx, nTailleLueTx)
+      	dbgAssertion(taille(sbufferTx) = nTailleLueTx)
+      	
+      	ajouteTransaction(clTxI)
+      FIN
+      
+      // calcul buffer 
+      m_bufferBrut = versbuffer()
+     type : 458752
+   -
+     name : construitDepuisBufferBrut
+     procedure_id : 2057594549490636922
+     type_code : 12
+     code : |1+
+      // init a partir d'un buffer s revu d'un peer
+      PROCEDURE construitDepuisBufferBrut(s buffer)
+      
+      // noter le buffer
+      m_bufferBrut = s
+      
+      // lecture du header dans un variant selon le format brut
+      // récupère aussi le nb de transactions
+      nTailleLue est un entier
+      enteteVariant  est variant = bitcoinRawFormat.gcConvBlockHeader.binToVariant(s,binBuffer::OPT_RenvoieTailleLue,nTailleLue)
+      dbgAssertion( nTailleLue > EnteteDeBloc::nTAILLEBRUTE )
+      // init de l'entet
+      m_entete.initFromVariant( enteteVariant )
+      sbufferRestant est un buffer = Milieu( s, nTailleLue+1)
+      dbgAssertion(enteteVariant.txn_count>0)
+      TableauSupprimeTout(m_clTabTransaction)
+      
+      // désérialiser chaque transations
+      pour i = 1 a enteteVariant.txn_count
+      	// récup de la transation I
+      	nTailleLueTx est un entier
+      	clTxI est un bitcoinTransaction
+      	clTxI.fromBuffer( sbufferRestant, nTailleLueTx)
+      	
+      	sbufferRestant = milieu(sbufferRestant , nTailleLueTx+1)
+      	TableauAjoute( m_clTabTransaction, clTxI)
+      FIN
+     type : 458752
+   -
+     name : versbuffer
+     procedure_id : 2057594549490702458
+     type_code : 12
+     code : |1-
+      procédure versbuffer() : buffer
+      
+       // récup entête  au format réseau
+      bufSHeader est un buffer = m_entete.versBuffer() 
+      // init avec l'entet
+      sbufferRes est un buffer = bufSHeader
+      // +NB transaction
+      nbTransaction est entier = :nGetTxtCount()
+      sbufferRes += binBuffer::_sVariableLengthI8ToBuffer( nbTransaction )
+      
+      // ajoute chaque transaction
+      pour i = 1 _a_ nbTransaction
+      	clTransactionI est bitcoinTransaction <-getTxAt(i)
+      	sbufferRes += clTransactionI.versBuffer()
+      	
+      FIN
+      
+      
+      renvoyer sbufferRes
+     type : 458752
+   -
+     name : nTailleFormatSerial
+     procedure_id : 2057594549490767994
+     type_code : 12
+     code : |1+
+      procédure nTailleFormatSerial() : entier
+      
+      renvoyer Taille(versbuffer())
+     type : 458752
+   -
+     name : IsValid
+     procedure_id : 2057594549490833530
+     type_code : 12
+     code : |1+
+      procédure IsValid() : booléen
+      
+      //si m_clHeader.txn_count<=0 ALORS
+      //	renvoyer faux
+      //FIN
+      
+      
+      //@TODO
+      renvoyer vrai
+     type : 458752
+   -
+     name : hCalcHash
+     procedure_id : 2057594549490899066
+     type_code : 12
+     code : |1+
+      PROCÉDURE hCalcHash() : hash256
+      
+      // récup du header a hasher
+      bufSHeader est un buffer = sGetEnteteFormatBuffer()
+      // calcul du hash avec sha256( sha256() )
+      hRes est hash256
+      hRes.calcShaSha(bufSHeader)
+      RENVOYER hRes
+     type : 458752
+   -
+     name : hGetPrevHash
+     procedure_id : 2057594549490964602
+     type_code : 12
+     code : |1+
+      // récup du hash du bloc précédent
+      procédure hGetPrevHash() : hash256
+      
+      //s est un buffer = m_.prev_block
+      //hRes est hash256
+      //hRes.fromHashAsBuffer( s )
+      renvoyer m_entete.prev_block
+     type : 458752
+   -
+     name : clGetEntete
+     procedure_id : 2057594549491030138
+     type_code : 12
+     code : |1+
+      // renvoie l’entête du bloc 
+      procédure clGetEntete() : EnteteDeBloc
+      
+      //clEnteteBloc est EnteteDeBlock
+      //clEnteteBloc.initFromVariant( m_clHeader )
+      renvoyer m_entete
+     type : 458752
+   -
+     name : sGetEnteteFormatBuffer
+     procedure_id : 2057594549491095674
+     type_code : 12
+     code : |1+
+      // renvoie l'entete d'un bloc au format buffer sérialisé sur le réseau
+      procédure sGetEnteteFormatBuffer() : buffer
+      
+      renvoyer m_entete.versBuffer()
+      //dbgAssertion(m_bufferBrut<>"")
+      //sBufRes est buffer =  Gauche(:m_bufferBrut, EnteteDeBlock::nTAILLEBRUTE)
+      //sBufRes est buffer = bitcoinRawFormat.gcConvBlockHeader.variantToBin( m_clHeader )
+      //sBufRes = Gauche(sBufRes,80)
+      //si :m_bufferBrut<>"" ALORS
+      //	dbgAssertion(sBufRes = gauche(:m_bufferBrut, EnteteDeBlock::nTAILLEBRUTE))
+      //FIN
+      
+      //renvoyer sBufRes
+      
+     type : 458752
+   -
+     name : nGetTxtCount
+     procedure_id : 2057594549491161210
+     type_code : 12
+     code : |1-
+      // renvoie le nombre de transactions dans le bloc
+      PROCEDURE nGetTxtCount() : entier
+      
+      //dbgAssertion( m_clHeader.txn_count = TableauOccurrence(m_clTabTransaction))
+      renvoyer m_clTabTransaction.Occurrence()
+     type : 458752
+   -
+     name : getTxAt
+     procedure_id : 2057594549491226746
+     type_code : 12
+     code : |1+
+      // renvoie une transaction par indice
+      procédure getTxAt( local n entier )
+      
+      renvoyer m_clTabTransaction[n]
+     type : 458752
+   -
+     name : getDateTime
+     procedure_id : 2057594549491292282
+     type_code : 12
+     code : |1+
+      // renvoie la date de minage du bloc
+      procédure getDateTime() : datetime
+      
+      res est dateTime
+      nDateUnix est un entier =  m_entete.timestamp
+      res =  EpochVersDateHeure(nDateUnix,epochUnixSeconde)
+      
+      renvoyer res
+     type : 458752
+   -
+     name : hCalcRacineArbreDeMerkle
+     procedure_id : 2057594549491357818
+     type_code : 12
+     code : |1+
+      
+      // renvoie la racine de l'arbre de merkle des transaction (la valeur qu'on retrouve dans l'entête)
+      Procédure hCalcRacineArbreDeMerkle() : hash256
+      
+      // calcul du hash de toutes les transactions du bloc
+      tabHash est un tableau de hash256 
+      pour tout transaction de m_clTabTransaction
+      	// calcul du hash de la transaction 
+      	htx est hash256 = transaction.hGetHash()
+      	//trace(htx.toString())
+      	// ajout au tableau
+      	tabHash.Ajoute(htx)
+      FIN
+      
+      
+      // rebond algo qui en fait un arbre et calcule la racine
+      clArbre est un ArbreDeMerkle
+      renvoyer clArbre.hCalculeRacine( tabHash )
+     type : 458752
+   -
+     name : SetEntetePourMinage
+     procedure_id : 2057594549491423354
+     type_code : 12
+     code : |1+
+      // modifier l'entete du bloc. 
+      // sert dans le cas ou l'on veut essayer de miner un nouveau bloc
+      procédure SetEntetePourMinage( entete EnteteDeBloc)
+      //dbgAssertion(m_bufferBrut ="")// pas valide
+      
+      m_entete = entete
+      // recalculer le buffer brut
+      //m_bufferBrut = m_entete.versBuffer() // car utilisé par versbuffer()
+      m_bufferBrut = versbuffer()
+     type : 458752
+   -
+     name : ajouteTransaction
+     procedure_id : 2057594549491488890
+     type_code : 12
+     code : |1+
+      // ajout d'une transaction dans le bloc (pour minage ou init depuis JSON)
+      procédure ajouteTransaction( tx est bitcoinTransaction )
+      
+      m_clTabTransaction.Ajoute(tx)
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1a113b420265a699
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

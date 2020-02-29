@@ -1,0 +1,127 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : jeton
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1ab4a88507963682
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      // représente une sortie d'une transaction bitcoin
+      // si il n'est pas dépensé dans une autre transaction c'est un "utxo" (Unspend TransaXion Ouput)
+      jeton est une Classe
+      	ID			   est IDJeton 		// IDentifant : ID transaction qui a crée ce jeton + indice dans les sorties
+      	montant 	   est btcMontant  	// valeur du jeton
+      	scriptVerrou   est buffer		// script pour autoriser la dépense du jeton
+      	addr		   est Adresse		// adresse associé si connue (= trouvée dans script si il a un format connu)
+      	etatDépense    est EtatDépensable	
+      	hashTxEntrée   est hash256  	// hash de la transaction ou le jeton est une entrée (si il est dépense. cas JET_Dépensé_Mem/JET_Dépenssé_Block )
+      	coinbase   	   est booléen		// vrai si récompense de minage (=1er bloc), faux sinon
+      	
+      	global
+      		_0 est jeton	// Jeton null, pour signaler des erreurs de jeton non trouvé
+      FIN
+      
+      // valeurs pour etatDépense
+      EtatDépensable est une énumération
+      	JET_Inconnu		   		= 0 // valeur non renseignée
+      	JET_Disponible     		= 1 // jeton présent un dans un bloc, dépensable
+      	JET_Reserve		   		= 2 // jeton présent dans un bloc, mais pas encore désensable (ex : bloc minée il y a moins de 100 blocs)
+      	JET_Dépensé_Mem	   		= 3 // dépensée dans le mempool mais la transaction a pas encore été validée.
+      	JET_CréeDépensé_Mem		= 4 // crée et dépensée dans le mempool (chaine de dépenses)
+      	JET_Dépenssé_Block 		= 5 // dépensée et dans au moins 1 bloc
+      	JET_Disponible_Mem 		= 6 // reçu dans le memPool
+      FIN
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 1924348230105511554
+     type_code : 27
+     code : |1+
+      PROCEDURE Constructeur()
+      
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 1924348230105577090
+     type_code : 28
+     code : |1-
+      PROCEDURE Destructeur()
+      
+      // renvoie une chaine qui identifie l'utxo pour utilisation dans une table de H
+     type : 655360
+   -
+     name : IDVersChaine
+     procedure_id : 1924348230105642626
+     type_code : 12
+     code : |1+
+      procédure IDVersChaine() : chaine
+      
+      renvoyer ID.hashTxSortie.toString() + ":" + ID.index
+     type : 458752
+   -
+     name : estEgalA
+     procedure_id : 1924348230105708162
+     type_code : 12
+     code : |1+
+      // indique si on est le meme jeton que <autreJeton>
+      procédure estEgalA( autreJeton est jeton )
+      
+      renvoyer ID.estEgalA( autreJeton.ID )
+     type : 458752
+   -
+     name : estCoinbase
+     procedure_id : 2029163140496265521
+     type_code : 12
+     code : |1+
+      // indique si un jeton est la récompense de minage (coinbase)
+      procédure estCoinbase() : booléen
+      
+      // vrai  que si dans un bloc
+      si etatDépense <> JET_Disponible ALORS
+      	renvoyer faux
+      FIN
+       dbgAssertion( pas ID.hashTxSortie.bEstZéro())
+       
+      // et qu'on est la 1ere transaction du bloc
+      renvoyer coinbase
+     type : 458752
+   -
+     name : sDump
+     procedure_id : 2057928702445518107
+     type_code : 12
+     code : |1+
+      // calcul du dump au format chaine (pour trace/messages d'erreur)
+      procédure sDump() : chaîne
+      
+      sRes est chaine
+      sRes =         Complète(montant.VersChaineDump() ,20) 
+      sRes += TAB +  Complète(etatDépense..Nom,		  20)
+      sRes += TAB +  ID.versChaine()
+      sRes += TAB +  hashTxEntrée.toString()
+      si coinbase alors
+      	sRes += TAB +  "(coinbase)"
+      fin
+      
+      renvoyer sRes
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1a91966c04d38489
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

@@ -1,0 +1,353 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : BitUtil
+ major_version : 25
+ minor_version : 0
+ type : 7
+ description : ""
+ subtype : 0
+procedure_set :
+ identifier : 0x19f2ce94003b5b4f
+ internal_properties : BQAAAAUAAABGLu41kG7fjQV3iS4F72qmnKaNh5694reolNKIW0iw
+ code_elements :
+  type_code : 31
+  p_codes :
+   -
+     code : |1-
+      
+      // collection pour gestion de bits a l'intérieur d'un flux d'octets
+      
+      constant
+      	LOWBITS  = 0
+      	HIGHBITS = 1
+      fin
+     type : 720896
+  procedures :
+   -
+     name : nGetXBitFrom1Byte
+     procedure_id : 1869784153705228277
+     type_code : 15
+     code : |1+
+      // renvoie <nNbBit> d'un octet en partie haute ou basse.
+      PROCEDURE nGetXBitFrom1Byte( nByte entier sans signe sur 1,  nNbBit entier, bLowBits booléen) : entier sans signe
+      	
+      nMask  est un entier 
+      nDecalageBit est un entier 
+      SI bLowBits ALORS
+      	// 0x5A => 0x0A 
+      	nMask  = bitDécaleDroite( 0xFF, 8-nNbBit ) // ex; "0x07" si 3 bits
+      SINON
+      	// 0x5A => 0x05
+      	nDecalageBit =  8 -nNbBit 
+      	nByte   = bitDécaleDroite(nByte, nDecalageBit ) 
+      	nMask  = bitDécaleDroite( 0xFF, 8-nNbBit ) // ex; "0x07" si 3 bits
+      FIN
+      // masquage des bits
+      nRes est entier sans signe = nByte & nMask
+      RENVOYER  nRes
+      
+     type : 458752
+   -
+     name : SetXBitFrom1Byte
+     procedure_id : 1869785261806851850
+     type_code : 15
+     code : |1-
+      // affecter les <nNbBit> d'un octet en partie haute ou basse
+      PROCEDURE SetXBitFrom1Byte( nByte_INOUT entier sans signe sur 1,  nNbBit entier, local nWhere entier, local nValToSet entier) 
+      
+      nMaskSrc   est un entier 
+      nMaskDest  est un entier 
+      //nDecalageBit est un entier 
+      nByteSet est entier 
+      
+      SI nWhere = LOWBITS  ALORS
+      	// si on veut affecter la partie basse
+      	// 0x5A => 0x0A 
+      	nMaskSrc  = bitDécaleDroite( 0xFF, 8-nNbBit ) // ex; "0x07" si 3 bits
+      	nMaskDest = bitDécaleGauche( 0xFF, 8        ) // ex; "0xF8" si 3 bits,
+      
+      SINON
+      	// si on veut affecter la partie haute
+      	// 0x5A => 0x05
+      	nMaskSrc  = bitDécaleGauche( 0xFF, 8-nNbBit ) //  ex; "0xE0" si 3 bits
+      	nMaskDest = bitDécaleDroite( 0xFF, 8        ) //  ex; "0x1F" si 3 bits,
+       	nValToSet = bitDécaleGauche(nValToSet, 8-nNbBit) // ex : 0x04 => "0x20 si 3 bits
+      FIN
+      
+      nByteSet  = nValToSet & nMaskSrc
+      nByte_INOUT =(nByte_INOUT &  nMaskDest) | nByteSet
+     type : 458752
+   -
+     name : bGet1BitFromInt
+     procedure_id : 1870271001135326241
+     type_code : 15
+     code : |1+
+      // récupérer 1 bit d'un entier. numBit = 0 poids faible, 31, poids fort
+      PROCEDURE bGet1BitFromInt( LOCAL n entier, numBit entier) : entier
+      
+      n = bitDécaleDroite(n,numBit)
+      RENVOYER (n&1)
+     type : 458752
+   -
+     name : Set1BitTo1
+     procedure_id : 1870271684035154358
+     type_code : 15
+     code : |1+
+      // affecter 1 bit dans un buffer binaire
+      PROCEDURE Set1BitTo1( pBuf entier système, numBit entier)
+      
+      n est un entier sans signe sur 1
+      // récup de l'octet courant
+      Transfert(&n,  pBuf, 1)
+      nBit est entier = bitDécaleGauche(1 ,numBit)
+      n = n | nBit
+      // réaffecte l'octet
+      Transfert( pBuf, &n, 1)
+     type : 458752
+   -
+     name : InvertEndian32Bit
+     procedure_id : 1870548395894973041
+     type_code : 15
+     code : |1+
+      // inverse les poids faibles et les poids forts d'un mot de 32 bits
+      PROCEDURE InvertEndian32Bit( local  n entier sans signe sur 4  ) : entier
+      
+      n2 est entier sans signe sur 4 octets = n
+      n2[1   a  8]  = n[25 a 32]
+      n2[9   a 16]  = n[17 a 24]
+      n2[17  a 24]  = n[9  a 16]
+      n2[25  a 32]  = n[1  a  8]
+      
+      renvoyer n2
+      
+      //renvoyer  bitDécaleGauche((n & 0x000000FF), 24) ...
+      //	+	  bitDécaleGauche((n & 0x0000FF00), 16) ...
+      //	+	  bitDécaleDroite((n & 0x00FF0000),  8) ...
+      //	+	  bitDécaleDroite((n & 0xFF000000), 24)
+      
+     type : 458752
+   -
+     name : bufferReverseEndian
+     procedure_id : 1873234270868901227
+     type_code : 15
+     code : |1+
+      PROCEDURE bufferReverseEndian( local s est un buffer ) : buffer
+      sRes est un buffer 
+      nTaille est  entier = taille(s)
+      pour i = 1 _a_ nTaille
+      	sRes += s[[ nTaille-i+1 ]]
+      	
+      FIN
+      dbgAssertion(taille(sRes) = nTaille)
+      renvoyer sRes
+     type : 458752
+   -
+     name : bufferToUI4LowEndian
+     procedure_id : 1875834976711541236
+     type_code : 15
+     code : |1+
+      PROCEDURE bufferToUI4LowEndian( s buffer ) : entier sans signe sur 4
+      
+      dbgAssertion(Taille(s)>=4)
+      res est un entier sans signe sur 4
+      Transfert(&res,&s,4)
+      RENVOYER res
+     type : 458752
+   -
+     name : bufferToUI8LowEndian
+     procedure_id : 1875836351101263978
+     type_code : 15
+     code : |1+
+      // convertion d'un buffer binaire vers entier sans signe sur 8
+      PROCEDURE bufferToUI8LowEndian( s buffer ) : entier sans signe sur 8
+      dbgAssertion(taille(s)>=8)
+      resUI8 est un entier sans signe sur 8
+      Transfert(&resUI8,&s,8)
+      renvoyer resUI8
+     type : 458752
+   -
+     name : bufferToUI2LowEndian
+     procedure_id : 1875836527194964677
+     type_code : 15
+     code : |1+
+      PROCEDURE bufferToUI2LowEndian( s buffer ) : entier sans signe 
+      
+      dbgAssertion(Taille(s)>=2)
+      res est un entier sans signe sur 2
+      Transfert(&res,&s,2)
+      RENVOYER res
+     type : 458752
+   -
+     name : bufferToUI2BigEndian
+     procedure_id : 2091538194374751684
+     type_code : 15
+     code : |1-
+      // conversion de 2 octet dans un buffer au format big endian en entier sur 16 bits
+      PROCÉDURE bufferToUI2BigEndian( s Buffer ) : entier sans signe 
+      
+      dbgAssertion(Taille(s)>=2)
+      res est un entier sans signe sur 2 = asc(s[[1]])*256 + asc(s[[2]])
+      RENVOYER res
+     type : 458752
+   -
+     name : UI8TobufferLowEndian
+     procedure_id : 1875946087534018724
+     type_code : 15
+     code : |1+
+      // convertion d'un buffer binaire vers entier sans signe sur 8
+      PROCEDURE UI8TobufferLowEndian( LOCAL n entier sans signe sur 8 ) : buffer
+      
+      res est un buffer = répete( caract(0),8)
+      Transfert(&res,&n,8)
+      renvoyer res
+     type : 458752
+   -
+     name : UI2ToBufferLowEndian
+     procedure_id : 1877982353064052101
+     type_code : 15
+     code : |1+
+      PROCEDURE UI2ToBufferLowEndian( local n entier sans signe sur 2 ) : buffer
+      
+      res est un buffer = répete( caract(0),2)
+      Transfert(&res,&n,2)
+      RENVOYER res
+      
+     type : 458752
+   -
+     name : bufferToI8LowEndian
+     procedure_id : 1878375763414577764
+     type_code : 15
+     code : |1+
+      // convertion d'un buffer binaire vers entier sans signe sur 8
+      PROCEDURE bufferToI8LowEndian( s buffer ) : entier sur 8
+      dbgAssertion(taille(s)>=8)
+      resUI8 est un entier sur 8
+      Transfert(&resUI8,&s,8)
+      renvoyer resUI8
+     type : 458752
+   -
+     name : UI4ToBufferLowEndian
+     procedure_id : 1909855077600535626
+     type_code : 15
+     code : |1-
+      PROCEDURE UI4ToBufferLowEndian( local n entier sans signe sur 4 ) : buffer
+      
+      res est un buffer = répete( caract(0),4)
+      Transfert(&res,&n,4)
+      RENVOYER res
+     type : 458752
+   -
+     name : DEREncodeRS
+     procedure_id : 1912475651895027034
+     type_code : 15
+     code : |1+
+      PROCEDURE DEREncodeRS(R entier256, S entier256)
+      
+      
+      // R ou S ne doivent pas avoir le bit de poids fort a 1. serait interprété comme "négatif" 
+      //voir https://www.itu.int/ITU-T/studygroups/com17/languages/X.690-0207.pdf, chap 8.3
+      dbgAssertion( R.val3 & 0x8000000000000000 = 0)
+      dbgAssertion( S.val3 & 0x8000000000000000 = 0)
+      	
+      
+      resDER est un buffer
+      // sequence
+      resDER += Caract(0x30)
+      // length
+      resDER += Caract(0x44)
+      
+      // --- X
+      // integer
+      resDER += Caract(0x02)
+      // length
+      resDER += Caract(0x20)
+      // R
+      resDER += R.versbuffer(Entier256::BUF_BIG_ENDIAN) 
+      
+      // --- Y
+      // integer
+      resDER += Caract(0x02)
+      // length
+      resDER += Caract(0x20)
+      // Y
+      resDER += S.versbuffer(Entier256::BUF_BIG_ENDIAN) 
+      dbgAssertion( Taille(resDER) = 0x46)
+      
+      RENVOYER resDER
+      
+      
+     type : 458752
+   -
+     name : InverseEndian
+     procedure_id : 2027591822329328262
+     type_code : 15
+     code : |1-
+      // inversion de l'endienness
+      procédure InverseEndian(buf est un buffer) : buffer
+      sBufferInverse est un Buffer 
+      POUR i=1 _À_ Taille(buf)
+      	sBufferInverse = buf[i] + sBufferInverse
+      FIN
+      renvoyer sBufferInverse
+     type : 458752
+   -
+     name : I4TobufferBigEndian
+     procedure_id : 2027591289682938961
+     type_code : 15
+     code : |1-
+      procédure I4TobufferBigEndian( LOCAL n entier sans signe sur 4 ) : buffer
+      
+      resLE est buffer = I4ToBufferLowEndian(n)
+      // inverse l'endian
+      resBE est buffer = InverseEndian(resLE)
+      
+      RENVOYER resBE
+     type : 458752
+   -
+     name : I4ToBufferLowEndian
+     procedure_id : 1929990627459578008
+     type_code : 15
+     code : |1-
+      PROCEDURE I4ToBufferLowEndian( local n entier sans signe sur 4 ) : buffer
+      
+      res est un buffer = répete( caract(0),4)
+      Transfert(&res,&n,4)
+      RENVOYER res
+     type : 458752
+   -
+     name : I2ToBufferLowEndian
+     procedure_id : 1929991172922517914
+     type_code : 15
+     code : |1-
+      PROCÉDURE I2ToBufferLowEndian( LOCAL n entier  sur 2 ) : buffer
+      
+      res est un buffer = répete( caract(0),2)
+      Transfert(&res,&n,2)
+      RENVOYER res
+     type : 458752
+   -
+     name : xorBuffer
+     procedure_id : 2143399431240024255
+     type_code : 15
+     code : |1-
+      // faire une XOR binaire de tous mes octets de <buffer1_INOUT> avec ceux de <v>
+      PROCEDURE xorBuffer( buffer1_INOUT buffer, buffer2 buffer )
+      
+      nNbOctet est un entier = min(Taille(buffer1_INOUT), Taille(buffer2))
+      POUR i = 1 a nNbOctet
+      	// XOR sur chaque octet
+      	buffer1_INOUT[i] = caract( OUExclusifBinaire( asc(buffer1_INOUT[i]) , asc(buffer2[i])) )
+      FIN
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : COL_SansNom1
+resources :
+ string_res :
+  identifier : 0x19f2ce8200391647
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

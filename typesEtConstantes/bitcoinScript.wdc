@@ -1,0 +1,294 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : bitcoinScript
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1a24f1c807b8ba61
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      bitcoinScript est une Classe
+      
+      FIN
+      
+      constant
+      	OP_FALSE		=   0
+      	// 1-75 : N/A The next opcode bytes is data to be pushed onto the stack
+      	OP_PUSH01BYTE	=  1  // 0x1
+      	OP_PUSH20BYTE	= 20  // 0x14
+      	OP_PUSH22BYTE	= 22  // 0x16
+      	OP_PUSH33BYTE	= 33  // 0x21
+      	OP_PUSH65BYTE	= 65
+      	
+      	OP_PUSHDATA1	=  76
+      	OP_PUSHDATA2	=  77
+      	OP_PUSHDATA4	=  78
+      	OP_1NEGATE		=  79
+      	OP_1			=  81
+      	OP_2			=  82
+      	//..
+      	OP_16			=  96
+      	OP_NOP			=  97
+      	OP_VERIFY		= 105
+      	OP_RETURN		= 106
+      	OP_DUP			= 118
+      	OP_EQUAL		= 135
+      	OP_EQUALVERIFY	= 136
+      	OP_NUMEQUAL		= 156
+      	NUMEQUALVERIFY 	= 157
+      	OP_WITHIN		= 165
+      	OP_RIPEMD160	= 166
+      	OP_SHA1			= 167
+      	OP_SHA256		= 168
+      	OP_HASH160		= 169
+      	OP_HASH256		= 170
+      	OP_CHECKSIG		= 172 // 0xAC
+      FIN
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 1883896385573075553
+     type_code : 27
+     code : |1+
+      PROCEDURE Constructeur()
+      
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 1883896385573141089
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+      
+     type : 655360
+   -
+     name : bParseToBtcAdress
+     procedure_id : 1883896385573206625
+     type_code : 12
+     code : |1+
+      //  nNetwork : BtcNet_Main ou BtcNet_Test
+      PROCEDURE bParseToBtcAdress( local bufSRawSrcipt buffer, nNetwork BtcNetwork,  clBtcAdress_OUT est Adresse )
+      
+      nTaille est un entier = Taille(bufSRawSrcipt)
+      si nTaille =0 ALORS
+      	renvoyer faux
+      FIN
+      
+      c0 	   est entier =asc(bufSRawSrcipt[1])
+      c1 	   est entier =asc(bufSRawSrcipt[2])
+      c2 	   est entier =asc(bufSRawSrcipt[3])
+      cLast  est entier =Asc(bufSRawSrcipt[nTaille])
+      nCPrewLast  est entier =Asc(bufSRawSrcipt[nTaille-1])
+      
+      // cas du script (coinbase )
+      // 0x21 PUSH 0x21 next byte
+      // 0xAC OP_CHECKSIG
+      si c0=OP_PUSH33BYTE _et_ nTaille = 35 _et_ cLast = OP_CHECKSIG alors
+      	bufSPubKey	      est buffer = Milieu(bufSRawSrcipt,2,33)
+      	bufSDERSignature est buffer  = Milieu(bufSRawSrcipt,2+16,16)
+      	si pas clBtcAdress_OUT.bInitFromRaw160Bit( bufSPubKey, nNetwork, cléPublique.Compressée ) alors
+      		renvoyer Faux
+      	FIN
+      
+      	renvoyer vrai
+      FIN
+      
+      // script ou la clé publique n'est pas révélée, mais masque par son hash. pour payer il faudra révéler la clé et son hash.
+      // mais on est plus sécurisé vs une future attaque sur ECDSA ( crypto quantique ?)
+      // DUP HASH160 PUSHDATA(20)[hash160] EQUALVERIFY CHECKSIG
+      SI c0=OP_DUP _et_ c1 = OP_HASH160  _ET_ c2 = OP_PUSH20BYTE  _et_ nTaille = 25  _ET_  nCPrewLast = OP_EQUALVERIFY _et_ cLast = OP_CHECKSIG ALORS
+      	// l'adresse est directement le hash160 a partir de l'octet 4
+      	bufHash160OfPubKey	      est buffer = Milieu(bufSRawSrcipt,4,20)
+      	clBtcAdress_OUT.bInitFromRaw160Bit( bufHash160OfPubKey, nNetwork, cléPublique.Compressée )
+      	renvoyer vrai
+      FIN
+      // version avec que le hash 
+      // HASH160 PUSHDATA(20)[hash160] EQUAL
+      si c0=OP_HASH160 _et_  c1 = OP_PUSH20BYTE _et_ nTaille= 23  _ET_   cLast = OP_EQUAL ALORS
+      	// l'adresse est directement le hash160 a partir de l'octet 3
+      	bufHash160OfPubKey	      est buffer = Milieu(bufSRawSrcipt,3,20)
+      	clBtcAdress_OUT.bInitFromRaw160Bit( bufHash160OfPubKey, nNetwork, cléPublique.Compressée )
+      	RENVOYER Vrai
+      fin
+      
+      // cas block 513 TestNet : 	00000000040b4e986385315e14bee30ad876d8b47f748025b26683116d21aa65
+      si  c0=OP_WITHIN _et_ nTaille=1 ALORS
+      	renvoyer faux
+      FIN
+      SI  c0=OP_NOP _ET_ nTaille=1 ALORS
+      	// 1 valide la dépense
+      	RENVOYER Faux
+      FIN
+      SI  c0=OP_NUMEQUAL _ET_ nTaille=1 ALORS
+      	RENVOYER Faux
+      FIN
+      SI  c0=NUMEQUALVERIFY  _ET_ nTaille=2 ALORS
+      	// C1 valide la dépense
+      	RENVOYER Faux
+      FIN
+      si c0=OP_FALSE _et_ c1= OP_EQUAL alors
+      	// 0 valide la dépense
+      	RENVOYER Faux
+      FIN
+      
+      //
+      //selon c
+      //	cas OP_DUP : trace("OP_DUP")
+      //	AUTRE CAS
+      //		
+      //FIN
+      
+      
+      renvoyer faux
+     type : 458752
+   -
+     name : _GetProcSelonOpCode
+     procedure_id : 2064219011220848418
+     type_code : 12
+     code : |1-
+      Procédure _GetProcSelonOpCode( opCode ) : procédure
+      
+      selon opCode
+      	//cas 0 // An empty array of bytes is pushed onto the stack. (This is not a no-op: an item is added to the stack.
+      	cas 1 a 75 // 1-75 : N/A The
+      	// next opCode bytes is data to be pushed onto the stack
+      		nNbOctet est entier = opCode
+      			Procédure interne INSTR_Push(parametres buffer, pileExec est une pile d'octets)
+      				pour i = 1 a nNbOctet
+      					  pileExec.Empile(parametres[i])
+      				FIN
+      			fin
+      		renvoyer INSTR_Push
+      	cas OP_NOP
+      		renvoyer _Intruction_OP_NOP
+      //	cas OP_DUP
+      //		// dupliquer la pile
+      //		PROCÉDURE INTERNE INSTR_Dup(parametres buffer, pileExec est une pile d'octets)
+      //		fin
+      //		rENVOYER INSTR_Dup
+      	AUTRE CAS
+      		// instruction non supportée
+      		RENVOYER null
+      FIN
+     type : 458752
+   -
+     name : ExecuteScript
+     procedure_id : 2062402497889689674
+     type_code : 12
+     code : |1+
+      procédure ExecuteScript( script buffer, bdd <utile> ) : entier
+      
+      resultat est un entier //256
+      pileExec est une pile d'octets
+      
+      	// exécution de 1 instruction du script
+      	Procédure interne _bExecute1Instruction( opCode est entier, parametres est buffer )
+      		proc est une procédure <- _GetProcSelonOpCode( opCode )
+      		si proc=null ALORS
+      			ErreurDéclenche(ERR_BITCOIN_CONSENSUS, ChaîneConstruit("Instruction %1 invalide dans un script", opCode))
+      			renvoyer faux
+      		FIN
+      		
+      		renvoyer proc( parametres, pileExec )
+      	
+      	fin
+      
+      // exécution des intructions du script
+      _VisiteInstructionDuScript(script, _bExecute1Instruction)
+      
+      // récup du sommet de la pile
+      si pileInfo( pileExec,tiNombreTotal) = 0 ALORS
+      	// echec
+      	renvoyer 0
+      	
+      FIN
+      octetRes est un octet
+      pileExec.Dépile(octetRes)
+      resultat = octetRes//.affecteAvecEntierPositif( octetRes )
+      renvoyer resultat
+     type : 458752
+   -
+     name : _DecodeInstruction
+     procedure_id : 2066443254524748426
+     type_code : 12
+     code : |1+
+      // décode une instrucion de <script>
+      // renvoie (instruction, parametère )
+      Procédure _DecodeInstruction( script buffer ) : ( entier, buffer )
+      
+      nOpCode est entier = asc( gauche(script,1) )
+      parametres est buffer
+      
+      //@TODO
+      renvoyer (nOpCode,parametres)
+     type : 458752
+   -
+     name : _VisiteInstructionDuScript
+     procedure_id : 2062508514725217482
+     type_code : 12
+     code : |1+
+      procédure _VisiteInstructionDuScript(script buffer, visiteur est une procédure )
+      
+      scriptRestant est un buffer = script
+      tantque scriptRestant<>"" 
+      	// récup Code de l'instruction a exécuter
+      	opCode est entier
+      	parametres est buffer
+      	(opCode, parametres) = _DecodeInstruction( script )
+      	
+      	// calcul buffer restant a décoder
+      	nTailleRestante est un entier = taille(script) - 1 - Taille(parametres)
+      	dbgAssertion(nTailleRestante>=0) 
+      	scriptRestant = droite( scriptRestant, nTailleRestante )
+      	
+      	// appel visiteur
+      	bContinuer est un booléen = visiteur( opCode, parametres  )
+      	si pas 	bContinuer ALORS
+      		retour // stopper le parcourt du script
+      	FIN
+      	
+      fin
+     type : 458752
+   -
+     name : _Intruction_OP_NOP
+     procedure_id : 2064220815107205105
+     type_code : 12
+     code : |1+
+      // OP_NOP : ne fait rien
+      PROCÉDURE _Intruction_OP_NOP(parametres buffer <utile> , pileExec est une pile d'octets )
+      
+      dbgAssertion(pileExec<>null)	
+     type : 458752
+   -
+     name : sCalc_HASH160
+     procedure_id : 2084626148815929908
+     type_code : 12
+     code : |1+
+      // fonction de hash utilisé par OP_HASH160
+      // OP_HASH160 		 // calculer Y = ripemd160( sha256( X ) )
+      procédure globale sCalc_HASH160( X buffer ) : buffer
+      
+      //sPubaddr 		est un buffer =  HashChaîne(HA_SHA_256,   X)
+      //sPubaddrHash160 est un buffer =  HashChaîne(HA_RIPEMD_160,sPubaddr)
+      renvoyer HashChaîne(HA_RIPEMD_160,HashChaîne(HA_SHA_256,   X))
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe2
+resources :
+ string_res :
+  identifier : 0x1a24ee7f06cce48d
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

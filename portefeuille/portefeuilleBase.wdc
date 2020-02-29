@@ -1,0 +1,798 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : portefeuilleBase
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1c2890f50b8f29a7
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      
+      // gestion d'un portefeuille bitcoin, classe de base.
+      PortefeuilleBase est une Classe
+      	implémente ICompteBitcoin
+      	
+      	// entete perso
+      	m_sNom est chaine
+      	m_nTypeNet		 est BtcNetwork	 // par ex. BtcNet_Main
+      	m_dateCreation 	 est une DateHeure
+      	m_image			 est image // picto pouv afficher le compte. 
+      	// info en cache
+      	m_dateDernierMaj est une DateHeure
+      	m_clDernierSolde est btcMontant
+      	// indice de la derniere addresse de payement rendue publique
+      	m_nMaxAddrePubliee est entier
+      	
+      	///--les utxo recue / dépensée avec etat courant
+      	m_tabJeton est un tableau de  jeton //STUtxoEx
+      		
+      	// -- comptes du portefeuille 
+      	m_techno est TechnoPortefeuille
+      	// 
+      
+      
+      
+      
+      	
+      FIN
+      
+      TechnoPortefeuille est une énumération
+      	BunchOfKeys // 1er systeme, un tas de clés sans rapports les aune avec les autres.
+      	HD_BIP32	// Hiérarchiee déterministe au format BIP32
+      fin
+      
+      
+      //constant
+      //	UTXOSTATUS_MEMPOOL 		 = jeton::JET_EnAttente_Mem // recu, dans le mempool
+      //	UTXOSTATUS_INBLOCK  	 = jeton::JET_Disponible
+      //	UTXOSTATUS_SPEND_MEMPOOL = jeton::JET_Dépensé_Mem // envoye, 0 confirmation
+      //	UTXOSTATUS_SPEND_INBLOCK = jeton::JET_Dépenssé_Block
+      //fin
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 2029031014265792935
+     type_code : 27
+     code : |1-
+      PROCEDURE Constructeur()
+      m_sNom  = "MonPortefeuille"
+      m_nTypeNet = BtcNet_Main
+      m_nMaxAddrePubliee= 0
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 2029031014265858471
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+     type : 655360
+   -
+     name : _VideTout
+     procedure_id : 2029031014265924007
+     type_code : 12
+     code : |1+
+      procédure _VideTout()
+     type : 458752
+   -
+     name : InitEtatJeton
+     procedure_id : 2029031014265989543
+     type_code : 12
+     code : |1+
+      // Init de l'état des jetons du portefeuille
+      procédure InitEtatJeton(clDBAcces  BaseBitcoinLocale)
+      
+      // Init des utxo associés au adresses gérées par le portefeuille
+      // (ie combien et de quelle valeur)
+      _vinitUtxoFromBlochain(clDBAcces)
+      
+      // Init date de MAJ
+      m_dateDernierMaj = DateHeureSys()
+      // Init dernier solde a 0 conf
+      m_clDernierSolde= getSolde(OptionSolde_0Conf)
+      // on sauve le cache
+      _bSauveCache()
+     type : 458752
+   -
+     name : _spclCreeObjetSelonFic
+     procedure_id : 2029031014266055079
+     type_code : 12
+     code : |1+
+      procédure globale _spclCreeObjetSelonFic(network est BtcNetwork ,  sNomCompleFic est chaine )  : portefeuilleBase
+      
+      // vérifie que le fichier existe.
+      s est une chaîne ANSI 
+      s = fChargeBuffer(sNomCompleFic)
+      SI ErreurDétectée() ALORS
+      	RENVOYER null
+      FIN
+      // récup du type dans les infos@@@TEMP
+      clTemp est PortefeuilleTableauDeClé
+      si pas clTemp.bCharge(sNomCompleFic) ALORS
+      	renvoyer null
+      FIN
+      techno est  TechnoPortefeuille = clTemp:m_techno
+      
+      
+      // alloc portefeuille + init network
+      pclNewPort est un portefeuilleBase dynamique
+      selon techno
+      	CAS BunchOfKeys
+      		pclNewPort = allouer un PortefeuilleTableauDeClé
+      	CAS HD_BIP32
+      		pclNewPort = allouer un PortefeuilleHDBip32
+      FIN
+      // Init type de réseau
+      pclNewPort.m_nTypeNet = network
+      
+      renvoyer pclNewPort
+     type : 458752
+   -
+     name : spclChargeParNomComplet
+     procedure_id : 2029031014266120615
+     type_code : 12
+     code : |1+
+      procédure globale spclChargeParNomComplet( network est btcNetwork, sNomComplet chaine) : portefeuilleBase
+      pclNewPort est un portefeuilleBase dynamique
+      
+      // on crée selon le type dans le fichier (type dérivé éventuellement)
+      pclNewPort = _spclCreeObjetSelonFic(network, sNomComplet) // allouer un portefeuilleBitcoin
+      SI pclNewPort=Null ALORS
+      	RENVOYER Null
+      FIN
+      // on charger
+      pclNewPort.m_sNom = fExtraitChemin(sNomComplet,fFichier)
+      si pas pclNewPort.bCharge() ALORS
+      	renvoyer  null
+      FIN
+      
+      renvoyer  pclNewPort
+     type : 458752
+   -
+     name : spclChargeOuCree
+     procedure_id : 2029031014266186151
+     type_code : 12
+     code : |1-
+      Procédure globale spclChargeOuCree(network  est BtcNetwork, sNom est chaine) : portefeuilleBase
+      
+      pclNewPort est un portefeuilleBase dynamique
+      // si nouveau
+      sFichier est chaine = _ssGetNomFichier( network, sNom )
+      si pas fFichierExiste(sFichier) ALORS
+      	// on crée
+      	pclNewPort = allouer un PortefeuilleHDBip32()
+      	pclNewPort.CréeNouveauPortefeuille( network, HD_BIP32 )
+      sinon
+      	// on crée selon le type dans le fichier (type dérivé éventuellement)
+      	pclNewPort = _spclCreeObjetSelonFic(network, sFichier) // allouer un portefeuilleBitcoin
+      	si pclNewPort=null ALORS
+      		RENVOYER null
+      	FIN
+      	// on charger
+      	pclNewPort.m_sNom = sNom
+      	si pas pclNewPort.bCharge() ALORS
+      		renvoyer null
+      	FIN
+      
+      	
+      FIN
+      
+      
+      renvoyer pclNewPort
+     type : 458752
+   -
+     name : CréeNouveauPortefeuille
+     procedure_id : 2029031014266251687
+     type_code : 12
+     group : 2
+     code : |1+
+      // <pfLogDidactique> : pfLogDidactique( etape est EtappeCreationCompte, résultat est chaine )
+      PROCÉDURE CréeNouveauPortefeuille( reseau est btcNetwork, techno est TechnoPortefeuille, nOption est un entier=0, sMotDePasse est chaine ="", iHasard est  IsourceDEntropie = null,
+      								  pfLogDidactique est une procédure = null )
+      
+      // Init date de création
+      m_dateCreation = DateHeureSys()
+      m_nTypeNet	   = reseau
+      
+      // Init techno
+      m_techno = techno
+      
+      // Init paramètres interne du portefeuille
+      _vCréeNouveauPortefeuille( iHasard, nOption, sMotDePasse, pfLogDidactique  )
+      
+      
+     type : 458752
+   -
+     name : _sGetNomFichier
+     procedure_id : 2029031014266317223
+     type_code : 12
+     code : |1+
+      //@récup Nom complet 
+      procédure _sGetNomFichier( )
+      
+      renvoyer _ssGetNomFichier( m_nTypeNet, m_sNom ) //+ ".btcwallet"
+     type : 458752
+   -
+     name : _bSauveCache
+     procedure_id : 2029031014266382759
+     type_code : 12
+     code : |1+
+      procédure _bSauveCache()
+      
+      x est un variant
+      x.lastbalance  		=  m_clDernierSolde.enSatoshi()
+      x.datelastmodif 	=  "" + m_dateDernierMaj 
+      x.maxAdressePubliee =  m_nMaxAddrePubliee
+      
+      s est chaine ansi
+      s= VariantVersJSON(x, psdMiseEnForme)
+      
+      fSauveBuffer(_sGetNomFichier() + ".cache" , s)
+      SI ErreurDétectée() ALORS
+      	RENVOYER Faux
+      FIN
+      
+      // OK
+      RENVOYER Vrai
+     type : 458752
+   -
+     name : _bchargeCache
+     procedure_id : 2029031014266448295
+     type_code : 12
+     code : |1+
+      procédure _bchargeCache()
+      
+      s est une chaîne ANSI 
+      s = fChargeBuffer(_sGetNomFichier() + ".cache")
+      SI ErreurDétectée() ALORS
+      	RENVOYER Faux
+      FIN
+      x est un variant
+      x =JSONVersVariant(s)
+      SI ErreurDétectée ALORS
+      	
+      	RENVOYER Faux
+      FIN
+      
+      // récup membres
+      m_clDernierSolde.SetEnSatoshi( x.lastbalance )
+      m_dateDernierMaj   = x.datelastmodif 
+      m_nMaxAddrePubliee = x.maxAdressePubliee
+     type : 458752
+   -
+     name : bSauve
+     procedure_id : 2029031014266513831
+     type_code : 12
+     group : 2
+     code : |1+
+      procédure virtuelle abstraite bSauve(bEcrasementAutorise=FAUX)
+     type : 458752
+   -
+     name : bCharge
+     procedure_id : 2029031014266579367
+     type_code : 12
+     group : 2
+     code : |1+
+      procédure virtuelle ABSTRAITE bCharge(  sNomCompleFic est chaine="" ) : booléen
+     type : 458752
+   -
+     name : _nRechercheUtxo
+     procedure_id : 2029031014266841511
+     type_code : 12
+     code : |1+
+      procédure _nRechercheUtxo( utxoRech est jeton )
+      
+      
+      POUR i=1 _À_ m_tabJeton..Occurrence
+      	utxoI est jeton = m_tabJeton[i]
+      	SI utxoI.estEgalA( utxoRech ) ALORS
+      		// trouvé
+      		RENVOYER i
+      	FIN
+      	
+      FIN
+      
+      //pas trouvé
+      dbgAssertion(Faux)
+      RENVOYER -1
+     type : 458752
+   -
+     name : _AjouteUtxo
+     procedure_id : 2029031014266972583
+     type_code : 12
+     code : |1+
+      procédure _AjouteUtxo( local nouveauJeton est jeton ) //, status est entier )
+      
+      
+      //nouveauJeton.etatDépense = status // UTXOSTATUS_MEMPOOL
+      m_tabJeton.Ajoute( nouveauJeton )
+     type : 458752
+   -
+     name : onDepenseBtc
+     procedure_id : 2029031014267038119
+     type_code : 12
+     type : 458752
+   -
+     name : vnGetTypeDeRéseau
+     procedure_id : 2029031014267103655
+     type_code : 12
+     group : 2
+     code : |1+
+      PROCEDURE virtuelle vnGetTypeDeRéseau() : BtcNetwork
+      
+      renvoyer m_nTypeNet
+      
+     type : 458752
+   -
+     name : _ssGetNomFichier
+     procedure_id : 2029031014267169191
+     type_code : 12
+     code : |1+
+      procédure globale  _ssGetNomFichier( network  est BtcNetwork,  sNom chaine)
+      
+      
+      // récup répertoire de base
+      sRep est une chaîne = getRepDonnéeSelonBtcNetwork(network)
+      // sous re pour les portefeuilles
+      sRep = ComplèteRep(sRep) + "Wallet"
+      
+      
+      renvoyer ComplèteRep(sRep) + sNom + ".btcwallet"
+     type : 458752
+   -
+     name : sDumpDesJetons
+     procedure_id : 2056818958654500586
+     type_code : 12
+     code : |1+
+      // renvoie un chaine avec les jetons du portefeuille et leur état
+      Procédure sDumpDesJetons()
+      
+      sRes est chaine
+      
+      soit TabTrie = m_tabJeton
+      TableauTrie(TabTrie,ttFonction, _cmpJeton)
+      	Procédure interne _cmpJeton(jeton1, jeton2)
+      		renvoyer chainecompare(  jeton1.ID.versChaine(), jeton2.ID.versChaine())
+      	fin
+      
+      POUR TOUT jetonI de TabTrie
+      	sEtat1Jeton est chaine = jetonI.sDump() 
+      	sRes += [RC] + sEtat1Jeton
+      FIN
+      
+      
+      renvoyer sRes
+     type : 458752
+   -
+     name : GetSolde
+     procedure_id : 2029031014267300263
+     type_code : 12
+     code : |1+
+      // calcul du sole du portefeuille
+      // <option> ex : OptionSolde_Disponible 
+      PROCEDURE GetSolde( option entier   ) : btcMontant
+      
+      // var pour cas de transaction avec rendu de monnaie
+      HtableVuMemPool est un tableau associatif de booléens
+      montantNet est btcMontant
+      				
+      nSoldeSatoshi est entier sur 8
+      POUR TOUT jetonI de m_tabJeton
+      	// si dans une Tx déja traitée on ignore
+      	sJetonTxId est chaine = jetonI.ID.hashTxSortie.toString()
+      	si HtableVuMemPool[ sJetonTxId ]..existe ALORS
+      		continue
+      	FIN
+      	
+      	selon jetonI.etatDépense
+      		cas  jeton::JET_Disponible
+      			// a ajouter au solde si on veut les confirmée et celle en attente dans le mempoll
+      			SI option= OptionSolde_Disponible_DansBloc ou option = OptionSolde_0Conf alors
+      				nSoldeSatoshi += jetonI.montant.enSatoshi()
+      			fin
+      		CAS  jeton::JET_Disponible_Mem
+      			// a ajouter que si on veut le mempool
+      			SI  option = OptionSolde_0Conf ALORS
+      				nSoldeSatoshi += jetonI.montant.enSatoshi()
+      			FIN			
+      			
+      //		cas jeton::JET_Disponible_Mem
+      //			// si on veut les récéption en attente on ne compte pas les retours de monnaie
+      //			si  option= OptionSolde_EnAttenteReception ALORS
+      //				SI _bEstDépenseAvecMonnaie(jetonI.ID.txid, montantNet ) ALORS
+      //					continuer
+      //				FIN
+      //			FIN
+      //			SI option= OptionSolde_Disponible alors
+      //				SI _bEstDépenseAvecMonnaie(jetonI.ID.txid, montantNet ) ALORS
+      //					nSoldeSatoshi += jetonI.montant.enSatoshi()
+      //					CONTINUER
+      //				FIN
+      //			FIN
+      //			
+      //			si option= OptionSolde_0Conf ou option= OptionSolde_EnAttenteReception ALORS
+      //				nSoldeSatoshi += jetonI.montant.enSatoshi()
+      //			FIN
+      		cas jeton::JET_Dépensé_Mem
+      			SI option= OptionSolde_EnAttenteEnvoi alors
+      //	
+      				// on recherche si le jeton est une transaction avec rendu de monnaie + récup solde de  cette opération (avec frais)
+      				si _bEstDépenseAvecMonnaie(jetonI.hashTxEntrée, montantNet ) ALORS
+      					nSoldeSatoshi += montantNet.enSatoshi()
+      //					// on note qu'on la vu
+      					HtableVuMemPool[ sJetonTxId ] = 1
+      				sinon
+      					nSoldeSatoshi += jetonI.montant.enSatoshi()
+      				fin
+      			FIN
+      			SI option= OptionSolde_Disponible_DansBloc  ALORS
+      				// pas encore complétemetn dépensé
+      				nSoldeSatoshi += jetonI.montant.enSatoshi()
+      			FIN
+      		cas jeton::JET_CréeDépensé_Mem
+      			// non dispo
+      		//@A voir
+      		AUTRE CAS
+      			
+      	FIN
+      	
+      	
+      FIN
+      
+      // pour calcul si une transaction contient des jeton pour la monnaie uniquement
+      	procédure interne _bEstDépenseAvecMonnaie( txid hash256,montantNet_OUT btcMontant  ) : booléen
+      		dbgAssertion(pas txid.bEstZéro())
+      		nNbEntree est entier
+      		nNbSortie est entier
+      		nMontantNetSTH est un entier sur 8 octets
+      		POUR TOUT jetonI de m_tabJeton
+      			si jetonI.ID.hashTxSortie.m_h<>txid.m_h _et_ jetonI.hashTxEntrée.m_h<>txid.m_h alors 
+      				// ignorer ce jeton
+      				continuer
+      			FIN
+      			si jetonI.etatDépense = jeton::JET_Dépensé_Mem ALORS
+      				nNbEntree++
+      				nMontantNetSTH += jetonI.montant.EnSatoshi()
+      			sinon si jetonI.etatDépense = jeton::JET_Disponible_Mem ALORS
+      				nNbSortie++
+      				nMontantNetSTH -= jetonI.montant.enSatoshi() // enlève la monnaie
+      			sinon
+      				dbgAssertion(faux)
+      			FIN
+      		fin
+      		//que si entrée Et sortie dans le portefeuille
+      		si nNbEntree>0 et nNbSortie>0 ALORS
+      			dbgAssertion(nMontantNetSTH>0)
+      			montantNet_OUT.SetEnSatoshi(nMontantNetSTH)
+      			RENVOYER vrai
+      		FIN
+      		renvoyer faux
+      	FIN
+      
+      // renvoie le résultat
+      x est btcMontant
+      x.SetEnSatoshi(nSoldeSatoshi)
+      renvoyer x
+     type : 458752
+   -
+     name : visiteUtxo
+     procedure_id : 2029031014267365799
+     type_code : 12
+     code : |1-
+      //--pour construite les transactions 
+      // visiter les sortis non dépensée 
+      // proto de fVisite : fvisiteur(txid buffer, indice entier , valeur entier sur 8 )
+      PROCEDURE visiteUtxo( fVisteur procédure )
+      
+      //// protefeuille hierarchique
+      //si :m_techno = HD_BIP32 ALORS
+      //	// parcourt des adresses qu'on a génére
+      //	pour i = 1 _a_ m_nMaxAddrePubliee
+      //		:m_HDKeys.getPublicKeyPair(2,)
+      //		
+      //		
+      //	FIN
+      //	
+      //	
+      //FIN
+      
+      pour tout stutxoExI de m_tabJeton
+      	bContinuer est un booléen = vrai
+      	// visite
+      	bContinuer = fVisteur( stutxoExI )
+      	
+      	si pas bContinuer ALORS
+      		retour // parcourt terminé 
+      	FIN
+      FIN
+       
+     type : 458752
+   -
+     name : tailleSignaturePourJeton
+     procedure_id : 2029031014267496871
+     type_code : 12
+     code : |1+
+      // renvoie la taille en octet de la signature via signePourJeton()
+      Procédure VIRTUELLE tailleSignaturePourJeton( j est jeton ) : entier
+      
+      // récup clé publique pour ce jeton
+      compte est btcAccount = _vGetComptePourJeton(j)
+      
+      // si pas de compte avec clé publique pour <j>
+      si compte.m_publicKey.estZéro() ALORS
+      	// clé non dispo
+      	renvoyer 0
+      FIN
+      
+      // récup buffer RAW qu'on met dans le script de déblocage du jeton
+      bufclépbub est un buffer = compte.publickeyformatRaw()
+      
+      nTaille est un entier =  Taille(bufclépbub)
+      
+      renvoyer nTaille
+     type : 458752
+   -
+     name : GetAddrChange
+     procedure_id : 2029031014267627943
+     type_code : 12
+     code : |1+
+      PROCEDURE virtuelle GetAddrChange() : Adresse
+      //s58 est chaine = m_TabKey[2].publicAddress()
+      //x est btcAddr 
+      //x.bInitFromBase58( s58 )
+      //x.bInitFromBase58("SfBzGLuEMo3adz1fV8EvfKwmHnRwYqkUbs")
+      renvoyer getAdressePourReceptionDeFond()
+      
+     type : 458752
+   -
+     name : bPossèdeAdresse
+     procedure_id : 2029031014267693479
+     type_code : 12
+     code : |1-
+      PROCEDURE bPossèdeAdresse( local btcAddrTest est Adresse dynamique ) : booléen
+      
+      bTrouve est un booléen
+      
+      // recher. linéraire
+      visiteUtxo( _visteurUtxo )
+      	PROCÉDURE INTERNE _visteurUtxo( jetonI est jeton )
+      	SI jetonI.addr.estEgalA( btcAddrTest )  ALORS
+      		// trouve
+      		bTrouve = Vrai
+      		RENVOYER Faux // fin de parcourt
+      	FIN
+      	// pas encore trouvé
+      	RENVOYER Vrai // continuer
+      	FIN
+      
+      renvoyer  bTrouve
+     type : 458752
+   -
+     name : visiteTransactionsSurCompte
+     procedure_id : 2029031014267759015
+     type_code : 12
+     code : |1+
+      // visite de toutes les transaction en rapport avec le portefeuille
+      // pour historique des opération
+      // proto de pVisiteur() :
+      // pVisiteur( transactionId, nMontantSth, tabSource, tabDest )
+      PROCEDURE visiteTransactionsSurCompte(local clDBAcces  BaseBitcoinLocale, local pVisiteur est une procédure   )
+      
+      TabTxVu est un tableau associatif  de chaine
+      
+      // parcourt des jetons connu du portefeuille
+      i est entier
+      POUR TOUT clJeton de m_tabJeton
+      	i++
+      	// ignore les TX déja traitées
+      	sClé est chaine = clJeton.ID.hashTxSortie.toString()
+      	SI TabTxVu[sClé]..Existe ALORS
+      		continue
+      	FIN
+      
+      	// traite une transation
+      	_AnalyseTx( clJeton.ID.hashTxSortie )
+      	
+      	// on note que traité (cas d'une transaction ou l'on a plusieurs jetons en in/out)
+      	TabTxVu [sClé] = sClé
+      	
+      FIN
+      
+      // pour chaque transaction unique qui comporte des jetons du portefeuille
+      	procédure interne _AnalyseTx( hashTransaction hash256 )
+      		nMontantSth est entier sur 8   // montant reçu en satoshi : positif ou négatif
+      		tabDest 	est un tableau de Adresse  // destinataires, adrresse ou l'on a envoyée
+      		tabSource 	est un tableau de Adresse  // origine de fonds reçu
+      		nMontantTotalEntree est entier sur 8
+      		nMontantTotalSortie est entier sur 8
+      		P_AnalyseEntree est une procédure = _AnalyseEntree
+      		P_AnalyseSortie est une procédure = _AnalyseSortie
+      		clDBAcces.VisiteEntreeTransaction(hashTransaction, P_AnalyseEntree)
+      		clDBAcces.VisiteSortieTransaction(hashTransaction, P_AnalyseSortie)
+      		procédure interne _AnalyseEntree( jIn jeton )
+      			nMontantTotalEntree += jIn.montant.enSatoshi()
+      			// si on possède pas cette entrée
+      			si pas bPossèdeAdresse(jIn.addr) ALORS
+      				TableauAjoute( tabDest, jIn.addr)
+      				// + recu
+      				nMontantSth += jIn.montant.enSatoshi()
+      			FIN
+      		fin
+      		PROCÉDURE INTERNE _AnalyseSortie( jIn jeton )
+      			// MAJ total
+      			nMontantTotalSortie += jIn.montant.enSatoshi()
+       			// si on possède pas cette entrée
+       			SI PAS bPossèdeAdresse(jIn.addr) ALORS
+      				TableauAjoute( tabSource, jIn.addr)
+      				// + dépensé
+      				nMontantSth -= jIn.montant.enSatoshi()
+      			FIN
+      		FIN
+      		nFrais est un entier sur 8 octets
+      		// cas du coinbase
+      		si  clDBAcces.bTransactionEstCoinbase(hashTransaction)  ALORS
+      			tabSource.SupprimeTout()
+      			nFrais = 0
+      			nMontantSth = nMontantTotalSortie
+      		sinon
+      			
+      			nFrais = nMontantTotalEntree - nMontantTotalSortie
+      			// si c'est un crédit, les frais de transaction ne sont pas pour nous
+      			si nMontantSth>0 ALORS
+      				nMontantSth -= nFrais
+      				dbgAssertion(nMontantSth>0)
+      			FIN
+      			dbgAssertion(nFrais>=0)
+      		fin
+      			
+      		//  on peut appeler le visiteur
+      		pVisiteur( hashTransaction, nMontantSth,nFrais, tabSource, tabDest )
+      		
+      	FIN
+      
+      
+      
+      
+     type : 458752
+   -
+     name : getImage
+     procedure_id : 2029031014267824551
+     type_code : 12
+     code : |1+
+      // renvoie une image pour le compte
+      PROCEDURE getImage()
+      
+      //@Test
+      //si m_image = Null ALORS
+      //h est hash256 
+      //h.calcShaSha((m_sNom))
+      //m_image = creeImageAvatarRobot(h,64)
+      //FIN
+      
+      
+      renvoyer m_image
+      
+     type : 458752
+   -
+     name : getHashUniqueId
+     procedure_id : 2029031014267890087
+     type_code : 12
+     code : |1+
+      // renvoie un hash qui identifie le compte.
+      // pour calcul d'une image d'avatar pour l'instant
+      PROCEDURE getHashUniqueId() : hash256
+       
+      bufPourHash est buffer = m_sNom +"_$$_" + val( m_nTypeNet ) 
+      h est hash256
+      h.calcShaSha(bufPourHash)
+      renvoyer h
+      
+     type : 458752
+   -
+     name : signePourJeton
+     procedure_id : 2029095138502966032
+     type_code : 12
+     code : |1+
+      PROCEDURE virtuelle signePourJeton(newTxRw est un buffer, j est jeton  ) :  (buffer,buffer)
+      
+      // récup du compte qui peut dépenser ce jeton
+      compte est btcAccount = _vGetComptePourJeton(j)
+      
+      // si on a pas trouvé de compte ou qu'il n'a pas de clé privée
+      si compte.m_privateKey.bEstVide() ALORS
+      	dbgAssertion(faux,"Le portefeuille n'a pas la clé du jeton")
+      	renvoyer ("","")
+      FIN
+      
+      // on signe le buffer <newTxRw>
+      bOK est un booléen
+      Signature est SignatureECDSA
+      bOK = compte.signerAvecLaCléPrivée( newTxRw, Signature )
+      // si écchec de la signature
+      SI pas bOK ALORS
+      	RENVOYER ("", "")
+      FIN
+      
+      // on encode la signature au format DER
+      signatureDer est un buffer= DEREncodeRS( Signature.R, Signature.S )
+      
+      // récup clé publicque compressé raw compresssé ou non selon <m_bCompressed> 
+      bufclépbub est un buffer = compte.publickeyformatRaw()
+      
+      
+      renvoyer (signatureDer, bufclépbub)
+      
+      
+     type : 458752
+   -
+     name : _vCréeNouveauPortefeuille
+     procedure_id : 2029090328054195622
+     type_code : 12
+     code : |1-
+      // Init interne du portefeuille
+      PROCÉDURE VIRTUELLE ABSTRAITE _vCréeNouveauPortefeuille( iHasard est IsourceDEntropie, nOption entier = 0, sMotDePasse est chaine ="",  pLog est procédure = null )
+     type : 458752
+   -
+     name : _vGetComptePourJeton
+     procedure_id : 2029092114760678313
+     type_code : 12
+     code : |1+
+      // renvoie la clé publique pour un jeton
+      PROCÉDURE VIRTUELLE ABSTRAITE _vGetComptePourJeton( j est jeton ) : btcAccount
+     type : 458752
+   -
+     name : getAdressePourReceptionDeFond
+     procedure_id : 2029096976788325479
+     type_code : 12
+     code : |1+
+      // renvoyer une adresse pour recevoir des bitcoins
+      PROCÉDURE VIRTUELLE ABSTRAITE getAdressePourReceptionDeFond() : Adresse
+     type : 458752
+   -
+     name : _vInitUtxoFromBlochain
+     procedure_id : 2029097784286011869
+     type_code : 12
+     code : |1+
+      PROCÉDURE VIRTUELLE ABSTRAITE _vInitUtxoFromBlochain(clDBAcces BaseBitcoinLocale)
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1a87f2c201684968
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+  strings :
+   -
+     text :
+      fr-FR : "version non supportée :"
+      en-GB : "version non supportée :"
+      es-ES : "version non supportée :"
+      ar-SA : "version non supportée :"
+     index : 0
+   -
+     text :
+      fr-FR : Le fichier existe déjà.
+      en-GB : Le fichier existe déjà.
+      es-ES : Le fichier existe déjà.
+      ar-SA : Le fichier existe déjà.
+     index : 1
+   -
+     text :
+      fr-FR : valeur invalide
+      en-GB : valeur invalide
+      es-ES : valeur invalide
+      ar-SA : valeur invalide
+     index : 2
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

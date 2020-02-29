@@ -1,0 +1,185 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : DifficultéPow
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1c3afc783e05b362
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      // représente la difficulté de calcul d'un bloc par preuve de travail
+      // =>conversion entres les différents formats utilisés
+      DifficultéPow est une Classe
+      	// meme format que dans l'entete des bloc bitoin.
+      	valFormatEntete  est entier sans signe sur 4 octet
+      FIN
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 2034215775078101858
+     type_code : 27
+     code : |1+
+      PROCEDURE Constructeur()
+      
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 2034215775078167394
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+     type : 655360
+   -
+     name : initDepuisEntete
+     procedure_id : 2034217725033881982
+     type_code : 12
+     code : |1-
+      // init a partir du format dans l’entête de bloc
+      procédure initDepuisEntete( bits entier sans signe sur 4 octet )
+      :valFormatEntete = bits
+     type : 458752
+   -
+     name : versFormatEntete
+     procedure_id : 2034217312716925394
+     type_code : 12
+     code : |1+
+      // renvoie la difficulté au format des entêtes de bloc
+      procédure versFormatEntete() : entier sans signe sur 4 octet
+      renvoyer :valFormatEntete
+      
+     type : 458752
+   -
+     name : versFormatPow
+     procedure_id : 2034220233347009089
+     type_code : 12
+     code : |1-
+      // renvoie la quantité de travail effectué pour trouver le bloc 
+      // utilisé pour calculer la plus longue chaine valide = celle avec le POW cumulé max.
+      PROCÉDURE versFormatPow( regles est consensus ) : réel
+      
+      target1    est réél    =  _rTargetFromBits(regles.getbitsGenesys() )
+      targetbloc est un réel =  _rTargetFromBits(:valFormatEntete)
+      SI targetbloc=0 ALORS
+      	dbgAssertion(Faux)
+      	RENVOYER 0
+      FIN
+      
+      // calcul de la difficulté cible de calcul
+      Difficulté est un réel = target1 /targetbloc
+      
+      RENVOYER Difficulté
+     type : 458752
+   -
+     name : versValeurCibleMax
+     procedure_id : 2034216930464812601
+     type_code : 12
+     code : |1+
+      // renvoie la difficult au format entier 256 max cible de la POW pour la hash du bloc.
+      procédure versValeurCibleMax() : entier256
+      
+      // rebond
+      renvoyer _calculTargetFromBits( :valFormatEntete )
+     type : 458752
+   -
+     name : _calculTargetFromBits
+     procedure_id : 2034216771550920801
+     type_code : 12
+     code : |1+
+      // renvoie l'entier 256 max cible de la POW pour la hash du bloc.
+      // permet de vérifier la preuve de travail (POW).
+      // ex : 0x1b3cc366
+      //      0x1b -- number of bytes in a target
+      //      0x3cc366 -- target prefix
+      // =>   0x3cc366000000000000000000000000000000000000000000000000 (it is exactly 0x1b = 27 bytes long).
+      // voir
+      //  https://bitcoin.stackexchange.com/questions/30467/what-are-the-equations-to-convert-between-bits-and-difficulty
+      PROCÉDURE _calculTargetFromBits( paramBits est entier sans signe sur 4 octets  ) : entier256
+      
+      target est entier256
+      target_ERR est entier256 // 0
+      // récup de l'exposant dans les 8 bits de poids fort
+      nTailleResEnOctet   est un entier = bitDécaleDroite( ETBinaire( paramBits, 0xFF000000), 24) 
+      // récup de la mantisse
+      nWord   est un entier sans signe sur 8 = ETBinaire( paramBits, 0x007FFFFF);
+      
+      SI nTailleResEnOctet<=3 ALORS
+      	//  nWord >>= 8*(3-nSize);
+      	nWord = bitDécaleDroite( nWord, 8*(3-nTailleResEnOctet) );
+      	target.affecteAvecEntierPositif(nWord)
+      SINON
+      	// *this <<= 8*(nSize-3);
+      	target.affecteAvecEntierPositif(nWord)
+      	target.multiplieParUnePuissanceDe2( nTailleResEnOctet * 8 - 24 )
+      FIN
+      
+      // tests comme le client Bitcoin core
+      bNegative est un booléen = (nWord <> 0) _et_ ((paramBits & 0x00800000) <> 0 )
+      SI bNegative ALORS
+      	ErreurDéclenche(ERR_BITCOIN_BADBLOCK,"la difficulté est invalide (négative).")
+      	RENVOYER target_ERR
+      FIN
+      bOverflow  est un booléen = faux
+      SI nWord<>0 ALORS
+      	SI nTailleResEnOctet > 34 ALORS
+      		bOverflow = Vrai
+      	FIN
+      	SI nWord > 0xff00 _ET_ nTailleResEnOctet > 33 ALORS
+      		bOverflow = Vrai
+      	FIN
+      	SI nWord > 0xffff _ET_ nTailleResEnOctet > 32 ALORS
+      		bOverflow = Vrai
+      	FIN
+      FIN
+      SI bOverflow ALORS
+      	ErreurDéclenche(ERR_BITCOIN_BADBLOCK,"la difficulté est invalide (dépassement de capacité).")
+      	RENVOYER target_ERR
+      FIN		
+      
+      // OK
+      RENVOYER  target
+      
+      
+     type : 458752
+   -
+     name : _rTargetFromBits
+     procedure_id : 2034221259904266841
+     type_code : 12
+     code : |1-
+      // renvoie le hash cible au format réél.
+      // permet de vérifier la preuve de traval.
+      // ex : 0x1b3cc366
+      //      0x1b -- number of bytes in a target
+      //      0x3cc366 -- target prefix
+      // =>   0x3cc366000000000000000000000000000000000000000000000000 (it is exactly 0x1b = 27 bytes long).
+      PROCÉDURE _rTargetFromBits( paramBits est entier sans signe sur 4 octets ) : réél
+      
+      
+      rtarget est un réel
+      
+      // extrait mantisse et exposant
+      nPow256		 est un entier = bitDécaleDroite( ETBinaire( paramBits, 0xFF000000), 24) 
+      nMantisse    est un entier = ETBinaire( paramBits, 0x007FFFFF);
+      
+      rtarget = nMantisse * Puissance(2.0, nPow256*8 - 24)
+      RENVOYER rtarget
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1c3afc5a3e024064
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

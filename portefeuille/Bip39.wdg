@@ -1,0 +1,555 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : Bip39
+ major_version : 25
+ minor_version : 0
+ type : 7
+ description : ""
+ subtype : 0
+procedure_set :
+ identifier : 0x19ecd4430011a83b
+ internal_properties : BQAAAAUAAABGLu41kG7fjQV3iS4F72qmnKaNh5694reolNKIW0iw
+ code_elements :
+  internal_properties : BQAAAAUAAAB96G7aVhbjutQ/eAD5EAXRmEHSqG60Al2ujVf6ELTzTbpJjoFmTjubx0dQh9n2fVVm2gvM+64B5AeNNINt+qb7GuV7noE7+0elFYIYlXAQCNk=
+  type_code : 31
+  p_codes :
+   -
+     code : |1-
+      // Gestion de la convertion d'un portefuille déterminise et une liste de mot vice-versa
+      gtabMots est un tableau de chaînes UNICODE
+      gIndexMots est un tableau associatif d'entiers
+      gbInit   est un booléen
+      
+      // langue pour la liste des mots utliser
+      gnLangueMot est un entier = nationAnglais // anglais par défaut
+      
+      // nombre de mots requis
+      constant nNBMOTBIP39 = 2048
+     type : 720896
+   -
+     code : |1-
+      
+     type : 720898
+  procedures :
+   -
+     name : InitLangue
+     procedure_id : 2148573917460420894
+     type_code : 15
+     code : |1-
+      // Init de mot pour une langue donnée. ex : nationFrançais
+      Procédure InitLangue( nLangue est entier )
+      
+      si gnLangueMot=nLangue _et_ gbInit ALORS
+      	retour
+      FIN
+      // RAZ en cas de changement de langue
+      gtabMots.SupprimeTout()
+      gbInit= Faux
+      
+      gnLangueMot = nLangue
+      _InitAu1erAppel()
+     type : 458752
+   -
+     name : _InitAu1erAppel
+     procedure_id : 2028751678482531516
+     type_code : 15
+     code : |1+
+      Procédure privée _InitAu1erAppel() 
+      
+      si gbInit ALORS
+      	retour // déja initalisé
+      FIN
+      // calcul du nom du fichier selon la langue
+      sNomCourtFic est chaine = "BIP39_english.txt"
+      selon gnLangueMot
+      	cas nationAnglais // 0 = défaut
+      		sNomCourtFic = "BIP39_english.txt"
+      	cas nationFrançais
+      		sNomCourtFic = "BIP39_french.txt"
+      	cas nationEspagnol
+      		sNomCourtFic = "BIP39_spanish.txt"
+      	AUTRE CAS
+      		dbgAssertion(faux,"langue non gérée")
+      FIN
+      
+      // calcul nom nom complet selon qu'on est en mode test ou en exe final
+      sFic est chaine = ComplèteRep(fRepExe()) + "..\..\portefeuille\" + sNomCourtFic
+      si EnModeTest() _et_ pas fFichierExiste(sFic) ALORS
+      	// cas du test depuis un composant
+      	sFic = "C:\Mes Projets\Bitcoin_Account_Creator\portefeuille\" + sNomCourtFic
+      	dbgAssertion(fFichierExiste(sFic))
+      FIN
+      si pas EnModeTest() alors
+      	sFic = "WDL:" + sNomCourtFic 
+      FIN
+      // rebond
+      si pas _bInitListeMots(sFic) ALORS
+      	dbgAssertion(faux,"echec _bInitListeMots")
+      FIN
+      gbInit = Vrai // Init faite
+      
+      
+     type : 458752
+   -
+     name : _bInitListeMots
+     procedure_id : 1868102188674495851
+     type_code : 15
+     code : |1+
+      PROCEDURE PRIVÉE _bInitListeMots( sFicMot chaine )
+      
+      // charger les mots au format ANSI
+      sListeMotAnsi est chaîne ansi = fChargeTexte(sFicMot,foAnsi)
+      si ErreurDétectée ALORS
+      	dbgAssertion(faux,ErreurInfo()+rc+sFicMot)
+      	renvoyer faux
+      FIN
+      // conversion unix <=> win32 de RC
+      sListeMotAnsi= Remplace(sListeMotAnsi,RC,Caract(10))
+      sListeMotAnsi= Remplace(sListeMotAnsi,Caract(10),RC)
+      // 
+      
+      // conversion en tableau, on doit avoir exactement 2048 mots
+      sListeMotUnicode est chaine UNICODE = AnsiVersUnicode(sListeMotAnsi,alphabetUTF8) // pas Latin-1
+      //sE_AccentAigu est chaine UNICODE
+      
+      ChaîneVersTableau(sListeMotUnicode,gtabMots,RC)
+      // ignorer la ligne vide a la fin
+      si gtabMots.Occurrence()=nNBMOTBIP39+1 _et_ gtabMots[nNBMOTBIP39+1]="" ALORS
+      	gtabMots.Supprime(nNBMOTBIP39+1)
+      FIN
+      si gtabMots.Occurrence()<>nNBMOTBIP39 ALORS
+      	dbgAssertion(Faux,"nb de mot invalide dans [%sFicMot%].") // + rc + gtabMots.Occurrence() )
+      	renvoyer faux
+      FIN
+      // Init index pour retrouver l'indice par nom rapidement
+      gIndexMots.SupprimeTout()
+      POUR i = 1 a nNBMOTBIP39
+      	motI est chaine UNICODE = gtabMots[i]
+      	gIndexMots[motI] = i
+      FIN
+      
+      // success
+      RENVOYER  vrai
+      
+      
+      
+     type : 458752
+   -
+     name : bufferVersPhrase
+     procedure_id : 1868104877324124859
+     type_code : 15
+     code : |1+
+      // crée une phase de 12 a 24 représentant tous les bits d'uun buffer  + CRC au format BIP39
+      // chaine ANSI UTF8
+      // Key dois faire entre 128 et 512 bits
+      PROCEDURE bufferVersPhrase( bufferSource est buffer, sERR_OUT chaine) : chaine ANSI
+      dbgAssertion(bufferSource<>"", "buffer vide")
+      
+      // Init Liste mots si pas encore faite
+      _InitAu1erAppel()
+      dbgAssertion(gtabMots.Occurrence()>0, "gtabMots vide")
+      
+      nTailleBit est un entier = Taille(bufferSource)*8
+       si nTailleBit<128 ou nTailleBit>512 ALORS
+      	sERR_OUT = ChaîneConstruit("Taille de la clé invalide : %1", nTailleBit)
+      	renvoyer ""
+      FIN
+      
+      // calcul du checksum
+      bufCRC est un buffer =	_sGetCRC( bufferSource )
+      nTailleChecksumEnBit est entier = taille(bufCRC)*8
+      
+      
+      //bufCRC est un buffer = gauche( bufChecksumSha, nTailleCSByte )
+      sPhraseRésultat_utf8 est une chaîne ansi
+      bufAEncoder est un buffer = bufferSource +bufCRC
+      nNbMot est entier = (nTailleBit + nTailleChecksumEnBit) / 11
+      //nTest est un entier = _nGet11BitFromBuffer( bufAEncoder, 22) //23*11 )
+      pour i=0 a nNbMot-1
+      	// récup des 11 bits a la position i
+      	n est un entier = _nGet11BitFromBuffer( bufAEncoder, i*11 )
+      	// récup du n eme mot du dictionnaire
+        	sMot_unicode est chaine unicode = gtabMots[ n+1 ]
+        	sMot_utf8 est chaine ansi = UnicodeVersAnsi(sMot_unicode,alphabetUTF8)
+        	sMot_unicode_DBG est chaine UNICODE = AnsiVersUnicode(sMot_utf8,alphabetUTF8)
+        	dbgAssertion(sMot_unicode_DBG = sMot_unicode)
+        	// concaténation a la phrase résultat
+      	sPhraseRésultat_utf8 += [" "] + sMot_utf8
+      FIN
+      
+      renvoyer sPhraseRésultat_utf8
+     type : 458752
+   -
+     name : MotsVersEcran
+     procedure_id : 1868106058440209761
+     type_code : 15
+     code : |1+
+      PROCEDURE MotsVersEcran(TABLE est champ)
+      //trace
+      TableSupprimeTout(TABLE)
+      POUR i = 1 a nNBMOTBIP39
+      	TableAjouteLigne(TABLE, "0x" + EntierVersHexa(i-1) ,gtabMots[i])
+      FIN
+     type : 458752
+   -
+     name : phraseVersBuffer
+     procedure_id : 1868116344887246705
+     type_code : 15
+     code : |1-
+      PROCEDURE phraseVersBuffer( local sPhrase chaine, sErreur_OUT chaine) : buffer
+      
+      // Init Liste mots si pas encore faite
+      _InitAu1erAppel()
+      
+      bufERR est un buffer
+      // on enleve les espaces au début et a la fin
+       sPhrase = SansEspace( sPhrase)
+      
+      // conversion de la phrase en un tableau de mots
+      tabMotLocal est un tableau de chaine
+      ChaîneVersTableau(sPhrase,tabMotLocal," ")
+      nNbMot est un entier = TableauOccurrence(tabMotLocal)
+      // on vérifie que le nombre de mots est OK
+      si nNbMot<12 ALORS
+      	sErreur_OUT = "Pas assez de mots. Il en faut 12 au minimum"
+      	renvoyer bufERR
+      FIN
+      SI nNbMot>24 ALORS
+      	sErreur_OUT = "Trop de mots. max 24 mots"
+      	RENVOYER bufERR
+      FIN
+      
+      nTaillebufAndCrcByte est un entier = (nNbMot*11)/8
+      si (nNbMot*11)  modulo 8<>0 ALORS
+      	// on met un octet de plus pour les bits restants
+      	nTaillebufAndCrcByte++
+      FIN
+      nTaillebufByte est un entier = nTaillebufAndCrcByte - 1//@A voir
+      bufSKeyAndCrc est un buffer = Répète(caract(0),  nTaillebufAndCrcByte)
+      
+      nPosCouranteBit est un entier=0//position courant en bits
+      nIndiceMot est entier sur 2 
+      // on agrandit le buffer par par de 11 bits par mots
+      pour i = 1 à nNbMot
+      	// récup du ieme mot
+      	sMotI_utf8 est chaine ansi = Minuscule( tabMotLocal[i] )
+      	// mots vides interdits
+      	si sMotI_utf8="" ALORS
+      		sErreur_OUT = ChaîneConstruit(<§@19ecd441000f9e670002§>,i,sMotI_utf8)
+      		RENVOYER bufERR		
+      	FIN
+      	
+      	// récup indice
+      	nIndiceMot = _nGetIndiceFromMot( sMotI_utf8 )
+      	//si pas trouvé 
+      	si nIndiceMot=-1 alors
+      		sErreur_OUT = ChaîneConstruit(<§@19ecd441000f9e670001§>,i,sMotI_utf8)
+      		RENVOYER bufERR
+      	FIN
+      	// ecriture dans le buffer
+      
+      	_Set11BitInBuffer( bufSKeyAndCrc, nPosCouranteBit, nIndiceMot )
+      	// mot suivant	
+      	nPosCouranteBit+= 11
+      FIN
+      // si il reste des bits (cas 12 mots)
+      si nPosCouranteBit modulo 8 <> 0 ALORS
+      	// on les ajoutes a la fin
+      	_Set11BitInBuffer( bufSKeyAndCrc, nPosCouranteBit, 0 )
+      fin
+      
+      
+      	PROCEDURE INTERNE _nGetIndiceFromMot( sMot_Utf8 chaine)
+      		// conversion dans le format gardé en interne
+      		motUnicode est chaine unicode =  AnsiVersUnicode( sMot_Utf8,alphabetUTF8 )
+      		//nPos est un entier = TableauCherche(gtabMots,tcDichotomique, motUnicode)
+      		si pas gIndexMots[motUnicode]..existe ALORS
+      			// le mot est invalide
+      			RENVOYER -1
+      		FIN
+      		nPos est un entier =  gIndexMots[motUnicode]
+      		// si le mot est invalide
+      //		si nPos=-1 ALORS
+      //			renvoyer -1
+      //		FIN
+      		dbgAssertion(nPos>=1)
+      		dbgAssertion(nPos<=Bip39.nNBMOTBIP39)
+      		renvoyer nPos-1
+      	FIN
+      
+      	
+      	
+      // découpe CRC/charge utile
+      bufSCRC est un buffer = droite(bufSKeyAndCrc, 1)
+      Key est un buffer = Gauche(bufSKeyAndCrc,nTaillebufByte)
+      
+      // calcul du checksum
+      bufCRC_Test est un buffer =	_sGetCRC( Key )
+      si bufSCRC<>bufCRC_Test ALORS
+      	sErreur_OUT = <§@19ecd441000f9e670000§>
+      	renvoyer ""
+      FIN
+      	
+      renvoyer Key
+     type : 458752
+   -
+     name : _nGet11BitFromBuffer
+     procedure_id : 1869786193814840979
+     type_code : 15
+     code : |1+
+      // renvoyer un entier sur 11 bits dans un buffer avec un offset en bit
+      PROCEDURE _nGet11BitFromBuffer( s buffer, nOffetBit entier) : entier
+      	PROCEDURE INTERNE _nGetXBitFrom1ByteInBuffer( pBuf est entier systeme,  nNbBit entier, bLowBits booléen)
+      		n est un entier sans signe sur 1
+      		// récup de l'octet
+      		Transfert(&n,  pBuf, 1)
+      		// récup de la partie haute ou basse de l'octet
+      		RENVOYER nGetXBitFrom1Byte(n,nNbBit,bLowBits)
+      	FIN
+      	
+      nRes  est un entier sans signe sur 4
+      nLow  est un entier sans signe sur 4
+      nHigh est un entier sans signe sur 4
+      nOffssetByte est entier = nOffetBit/8
+      nOffssetBitHigh est entier = nOffetBit - nOffssetByte*8 // ie modulo 8 
+      nSizeBitHigh   est entier  = 8-nOffssetBitHigh // tout le reste du mot
+      nOffssetBitLow  est entier = 0
+      nSizeBitLow    est entier  = 11 - nSizeBitHigh // ce qu'il reste
+      SI nSizeBitLow>8 ALORS
+      	nSizeBitLow = 8 // Max 1 byte
+      FIN
+      
+      // format big endian : le poids fort est a l'adresse la plus basse
+      // poid fort, la fin de l'octet bas
+      nHigh = _nGetXBitFrom1ByteInBuffer( &s + nOffssetByte,    nSizeBitHigh, Vrai)
+      // poids faible
+      nLow  = _nGetXBitFrom1ByteInBuffer( &s+  nOffssetByte+1,  nSizeBitLow,  Faux)
+      nRes = nLow + bitDécaleGauche( nHigh, nSizeBitLow)
+      // si sur 3 octets
+      SI nSizeBitLow+ nSizeBitHigh<11 ALORS
+      	nSizeBit3 est un entier = 11 - (nSizeBitLow + nSizeBitHigh)
+      	nLow3 est un entier  = _nGetXBitFrom1ByteInBuffer( &s+  nOffssetByte+2,  nSizeBit3,  Faux)
+      	nRes = nLow3 + bitDécaleGauche( nRes, nSizeBit3)
+      FIN
+      	
+      RENVOYER nRes
+     type : 458752
+   -
+     name : _Set11BitInBuffer
+     procedure_id : 1869787087168115271
+     type_code : 15
+     code : |1+
+      // affecter un entier sur 11 bits dans un buffer a une position (offset) en bit
+      PROCEDURE _Set11BitInBuffer( s buffer,  local nOffetBit entier, local nVal11bitToSet entier) 
+      
+      // affecter bit a bit
+      pour i=0 à 10
+      	//récup du ieme bit de nVal11bitToSet.0 = le plus fort
+      	// ex:               012 3456 789A
+      	// "0x036C" => "00000011 0110.1100"
+      	nPosBitSrc est entier = 10-i // position en pow2 (0 = poids faible)
+      	bBit est un booléen = bGet1BitFromInt(nVal11bitToSet, nPosBitSrc)
+      	// si 1 met à 1 dans le buffer
+      	si bBit<>0 ALORS
+      		// fixer le ieme bit du buffer
+      		soit nOffetBitCur = nOffetBit + i
+      		nOffssetByte est entier   = nOffetBitCur/8
+      		nNumBit est entier = 7-modulo(nOffetBitCur,8)
+      		p est un entier système = &s + nOffssetByte
+      		Set1BitTo1(  p, nNumBit ) 
+      	FIN
+      
+      fin	
+      // on devrait relire la valeur qu'on vient d'écrire
+      dbgAssertion( _nGet11BitFromBuffer(s,nOffetBit) = nVal11bitToSet)	
+      retour
+      
+     type : 458752
+   -
+     name : _sGetCRC
+     procedure_id : 1870272611748174722
+     type_code : 15
+     code : |1+
+      // calcul du checksum pour une clé
+      PROCEDURE _sGetCRC(Key buffer) : buffer
+      
+      nTailleBit est entier = Taille(Key)*8
+      
+      //soit bufChecksumSha = HashChaîne(HA_SHA_256,HashChaîne(HA_SHA_256,Key))
+      bufChecksumSha est un buffer = HashChaîne( HA_SHA_256,Key)
+      nTailleChecksumEnBit est un entier = nTailleBit / 32  // /2 : BIP39. résultat en en bits
+      nTailleCSByte est entier = nTailleChecksumEnBit/8
+      
+      SI nTailleCSByte=0 ALORS
+      	nTailleCSByte=1
+      FIN
+      bufCRC est un Buffer = Gauche( bufChecksumSha, nTailleCSByte )
+      si nTailleChecksumEnBit=4 ALORS
+      	// on masque les 4 bits de droite- cas 12 mots
+      	bufCRC = caract( asc(bufCRC[1]) & 0xF0 )
+      FIN
+      renvoyer  bufCRC
+     type : 458752
+   -
+     name : PBKDF2_rtfc2998
+     procedure_id : 1870274909556475444
+     type_code : 15
+     code : |1-
+      // fonction de dérivation de mot de passe pour obtenir un bloc binaire
+      // implémentation de la rtfc2998.
+      // voir https://tools.ietf.org/html/rfc2898
+      // <_algo> :ex : HA_HMAC_SHA_512
+      PROCEDURE PBKDF2_rtfc2998( _algo est entier,  PasswordUtf8 buffer, nbIteration entier, nDkLen entier, Salt chaine ansi) : buffer
+      
+      resultat est un buffer
+      //bufIBigEndian est un Buffer = Répète(Caract(0),4)
+      
+      // taille d'un block de hashFunc en octets
+      hLen est entier = taille( HashChaîne(_algo, "test","test"))
+      dbgAssertion(hLen>8) // 64 bits min.
+      nResteMod8 est un entier = hLen modulo 8 
+      
+      //Let l be the number of hLen-octet blocks in the derived key,
+      //rounding up, and let r be the number of octets in the last
+      l est entier = (nDkLen + (hLen -1)) / hLen
+      nSizeLastBlock est entier = nDkLen - (l - 1) * hLen
+      
+      
+      // calcul de chaque bloc de taille <hLen >
+      numBlock est un entier = 1
+      pour numBlock = 1 a l
+      
+      	// calcul de U0,....UN
+      	nBigEndian est un entier = InvertEndian32Bit( numBlock )
+      	bufIBigEndian est un Buffer = Répète(Caract(0),4)
+      	transfert(&bufIBigEndian,&nBigEndian,4)
+      	U_N est un buffer = HashChaîne(_algo,  Salt + bufIBigEndian, PasswordUtf8 )
+      	blockI est un buffer = U_N // Répète(Caract(0), hLen )
+      	pour i = 1 _à_  nbIteration-1
+      		// U_1 = PRF (P, S || INT (i)) ,
+      		// U_2 = PRF (P, U_1) ,
+      		// ...                ...
+      		// U_c = PRF (P, U_{c-1}) .
+      		//U_N  = hashFunc(  U_N, PasswordUtf8 )
+      		U_N  = HashChaîne(_algo,  U_N, PasswordUtf8 )
+      		// calcul de F  = un block de taille hLen
+      		//  F (P, S, c, i) = U_1 \xor U_2 \xor ... \xor U_c
+      		//_xorBlock( blockI, U_N )
+      //		blockI =  blockI || U_N
+      		POUR j = 0 _À_ hLen/8-1
+      			I64_A est un entier sur 8 octets
+      			I64_B est un entier sur 8 octets
+      
+      			//XOR par bloc de 64 bits
+      			Transfert(&I64_A,&blockI+j*8, 8)
+      			Transfert(&I64_B,&U_N   +j*8, 8)
+      			I64_C est un entier sur 8 octets = I64_A || I64_B
+      			Transfert(&blockI+j*8,&I64_C, 8)
+      			//blockI[[j]] = Caract( Asc(blockI[[j]]) || Asc(U_N [[j]])  )
+      		FIN
+      		// si non divisible par 8
+      		pour k = hLen-nResteMod8+1 a hLen
+      			blockI[[ k ]] = Caract( Asc(blockI[[ k ]]) || Asc(U_N [[ k ]])  )
+      		FIN
+      		
+      		// suite
+      		//U_N = U_NNext
+      	FIN
+      
+      	// si c'est le dernier bloc
+      	si numBlock = l
+      		resultat += gauche( blockI, nSizeLastBlock)
+      	sinon
+      		resultat += blockI
+      	fin
+      fin
+      
+      	procédure interne _xorBlock( BufInOUT buffer, bufXor buffer )
+      		dbgAssertion(Taille(BufInOUT) = Taille(bufXor))
+      		pour i = 1 _a_ Taille(BufInOUT)
+      			BufInOUT[[i]] = caract( OUExclusifBinaire(asc(BufInOUT[[i]]) , asc(bufXor[[i]]) ) )
+      		FIN
+      	FIN
+      
+      
+      
+      
+      renvoyer resultat
+     type : 458752
+   -
+     name : DeriveParaphrase
+     procedure_id : 1870552033732464987
+     type_code : 15
+     code : |1+
+      // transforme la phrase + mot de passe en un buffer de 512 bits ( 64 octets )
+      // => sert de racine aux portefeuilles hiérarchiques déterministe.
+      PROCEDURE DeriveParaphrase( phrase_password buffer, pass chaine="") : buffer
+      
+      bufdérivé est un buffer
+      
+      // tiré du doc du BIP39 - https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
+      // "PBKDF2 function with a mnemonic sentence (in UTF-8 NFKD) used as the password 
+      //  and the string "mnemonic" + passphrase (again in UTF-8 NFKD) used as the salt. 
+      //  The iteration count is set to 2048 
+      //  HMAC-SHA512 is used as the pseudo-random function. The length of the derived key is 512 bits (= 64 bytes). 
+      bufdérivé = PBKDF2_rtfc2998(HA_HMAC_SHA_512, phrase_password,2048,64,"mnemonic"+ pass)
+      dbgAssertion( taille(bufdérivé) = 64 )
+      renvoyer bufdérivé 
+     type : 458752
+   -
+     name : sGetListeMotsCommencantPar
+     procedure_id : 2030096978331116628
+     type_code : 15
+     code : |1+
+      PROCÉDURE sGetListeMotsCommencantPar( sDébut est chaîne ) : chaîne
+      
+      // Init Liste mots si pas encore faite
+      _InitAu1erAppel()
+      
+      résultat est chaîne
+      
+      POUR TOUT s1mot DE gtabMots
+      	// si le mot commence par sdébut
+      	SI s1mot.CommencePar( sDébut,ccSansCasse+ccSansAccent) ALORS
+      		// +1 mot trouvé
+      		résultat += [RC] + s1mot
+      	FIN
+      	
+      FIN
+      
+      RENVOYER résultat
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : COL_SansNom1
+resources :
+ string_res :
+  identifier : 0x19ecd441000f9e67
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+  strings :
+   -
+     text :
+      fr-FR : "Au moins un des mot est faux ou ils ne sont pas dans l'ordre. \r\nCRC invalide."
+      en-GB : "Au moins un des mot est faux ou ils ne sont pas dans l'ordre. \r\nCRC invalide."
+      es-ES : "Au moins un des mot est faux ou ils ne sont pas dans l'ordre. \r\nCRC invalide."
+      ar-SA : "Au moins un des mot est faux ou ils ne sont pas dans l'ordre. \r\nCRC invalide."
+     index : 0
+   -
+     text :
+      fr-FR : "le mot n°%1 : '%2' n'est pas valide"
+      en-GB : "le mot n°%1 : '%2' n'est pas valide"
+      es-ES : "le mot n°%1 : '%2' n'est pas valide"
+      ar-SA : "le mot n°%1 : '%2' n'est pas valide"
+     index : 1
+   -
+     text :
+      fr-FR : le mot n°%1 est vide
+      en-GB : le mot n°%1 est vide
+      es-ES : le mot n°%1 est vide
+      ar-SA : le mot n°%1 est vide
+     index : 2
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

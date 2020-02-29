@@ -1,0 +1,547 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : btcAccount
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x19ff558701079ea5
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      btcAccount est une Classe
+      	// clé privée, 256 bit. 
+      	// le facteur K multiplicatif dans ECDSA
+      	m_privateKey est variableProtégée// => entier256 
+      	// réseau pour lequel la clé est déstiné. ex BtcNet_Main
+      	m_nNetwork est BtcNetwork
+      	// indique si on doit générer des clés publiques compressée ou de type segwit par ex.
+      	m_option est cléPublique::TypeAddresse 
+      	//m_bCompressed est un booléen
+      	// clé publique (x,y) , coordonées du point P = K.P0
+      	m_publicKey est cléPublique
+      	//pubKeyY est entier256
+      	// cas ou l'on a que la hash160
+      	m_hash160Only est un buffer
+      		
+      	
+      FIN
+      
+      
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 1873310008335703717
+     type_code : 27
+     code : |1-
+      PROCEDURE Constructeur()
+      m_option = cléPublique.Compressée
+     type : 589824
+   -
+     name : Constructeur
+     procedure_id : 1873310008335703717
+     type_code : 27
+     code : |1+
+      // copie
+      PROCÉDURE Constructeur( source est btcAccount)
+      m_privateKey 	= source.m_privateKey
+      m_nNetwork 		= source.m_nNetwork
+      m_option 		= source.m_option
+      m_publicKey	 	= source.m_publicKey
+      m_hash160Only 	= source.m_hash160Only
+     type : 589825
+   -
+     name : Destructeur
+     procedure_id : 1873310008335769253
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+     type : 655360
+   -
+     name : bcreateNewAccount
+     procedure_id : 1873310824379614671
+     type_code : 12
+     code : |1+
+      // création d'un compte
+      // renvoie FAUX si pas assez d'entropie pour crée un compte sécurisé
+      procédure bcreateNewAccount( iHasard est IsourceDEntropie= null, nNetwork BtcNetwork = BtcNet_Main, option est cléPublique::TypeAddresse=cléPublique.Compressée, 
+      							 pfLogDidactique est une procédure  <utile> = null) : booléen
+      
+      // tirage d'un nombre K au hasard.
+      // /!\ ATTENTION /!\
+      //  si ce nombre n'est pas assez aléatoire, ie n'a pas assez d'entropie,
+      //  la sécurité du compte est compromise 
+      nTailleBuf est un entier =  256 / 8 
+      dbgAssertion( nTailleBuf = 32 )
+      nombresAuHasard est buffer = HasardCryptoBuffer( nTailleBuf )
+      si iHasard=null alors
+      	nombresAuHasard  = HasardCryptoBuffer( nTailleBuf )
+      sinon
+      	nombresAuHasard  = iHasard.sGetBufferAléaloire( nTailleBuf )
+      fin
+      si nombresAuHasard  = "" ALORS
+      	// echec
+      	RENVOYER  faux
+      FIN
+      
+      // on construit la clé privée par copie binaire
+      // NB1 :  bigEndian / lowEndia sans importance car nombre aléatoire
+      // NB2 : pas de test du cas ou K > ordre de la courbe elliptique, très improbable
+      cléPrivée est entier256
+      cléPrivée.affecteAvecBuffer( nombresAuHasard , Entier256::BUF_LOW_ENDIAN ) 
+      :m_privateKey.SetValeurSecret(cléPrivée)
+      // calcul de la clé publique a partir de la clé privée
+      :m_publicKey.initDepuisCléPrivée( cléPrivée  )
+      
+      // SECURITE : on s'assure que plus rien en clair en mémoire ne permet d'obtenir la clé privée
+      VariableProtégée::DetruitSecret( cléPrivée )
+      VariableProtégée::DetruitSecret( nombresAuHasard  )
+      
+      
+      // noter pour quel réseau et si on génère des clés publiques compressées (= que.X et la parité)
+      m_nNetwork    = nNetwork
+      m_option	  = option
+      
+      //succes
+      renvoyer vrai
+     type : 458752
+   -
+     name : bcreateFromSerialisedData
+     procedure_id : 1873501602533297793
+     type_code : 12
+     code : |1+
+      procédure bcreateFromSerialisedData( sPrivateKey est chaine, sPublicKey chaine, sPublicAddress chaine,  sErreur_OUT chaine ) : booléen
+      
+      // flag pour savoir si on doit recalculer la clé publique a partir de la clé privées
+      bCalculeCléPublique est un booléen = vrai
+      
+      /// Init clé publique
+      si sPublicKey<>"" ALORS
+      	// init de <pubKey>
+      	sBufraw est un buffer= HexaVersBuffer(sPublicKey)
+      	si  initpublicKeyFromRawSerial(sBufraw) ALORS
+      		bCalculeCléPublique = Faux
+      	FIN
+      
+      FIN
+      // convertion de la clé privée au format Texte vers format interne
+      si pas bcreateFromWif(sPrivateKey, bCalculeCléPublique, sErreur_OUT ) ALORS
+      	// echec
+      	renvoyer faux
+      FIN
+      // Par sécurité on vérifie qu'on re-sauverait la même chose
+      sWIF_Calculé est chaine =  privateKeyFormaWIF()
+      si  sPrivateKey<>sWIF_Calculé ALORS
+      	dbgAssertion(faux, sPrivateKey + rc + sWIF_Calculé)
+      	// echec
+      	RENVOYER Faux
+      FIN
+      // idem clé publique pour la partie nX (cas vieux format compressés)
+      sPubKey_Calculé est chaine =  BufferVersHexaSansEspace( publickeyformatRawUncompressed()) 
+      SI sPublicKey<>"" _et_ milieu(sPublicKey,3,64)<>Milieu(sPubKey_Calculé,3,64) alors
+      	dbgAssertion(faux , sPublicKey + rc + sPubKey_Calculé)
+      	// echec
+      	RENVOYER Faux
+      fin
+      // idem on vérifie l'adresse
+      sPublicAddress_Calculé est chaine =  publicAddress()
+      si sPublicAddress<>"" _et_ sPublicAddress<>sPublicAddress_Calculé  ALORS
+      
+      	dbgAssertion(Faux, sPublicAddress+rc+sPublicAddress_Calculé )
+      	// echec
+      	RENVOYER Faux
+      fin
+      
+      // OK
+      renvoyer vrai
+     type : 458752
+   -
+     name : initpublicKeyFromRawSerial
+     procedure_id : 2026420365800401350
+     type_code : 12
+     code : |1+
+      // init a partir du format de sérialisation RAW non compressé
+      procédure initpublicKeyFromRawSerial( bufSPubKey est buffer )
+      
+      //rebond
+      renvoyer m_publicKey.initDepuisBufferNonCompressé(bufSPubKey)
+     type : 458752
+   -
+     name : publickeyformatRawUncompressed
+     procedure_id : 2026421993633756085
+     type_code : 12
+     code : |1+
+      // renvoie la clé publique au format RAW non compressé
+      procédure publickeyformatRawUncompressed()
+      
+      //rebond
+      RENVOYER m_publicKey.versbufferNonCompressé()
+      
+     type : 458752
+   -
+     name : publickeyformatRaw
+     procedure_id : 1912471803604154605
+     type_code : 12
+     code : |1-
+      PROCÉDURE publickeyformatRaw() : buffer
+      
+      // si on a été initialisé avec que le hash 160 de l'adresse
+      SI m_hash160Only<>"" ALORS
+      	dbgAssertion(Faux)
+      	renvoyer "" // non dispo
+      FIN
+      
+      SI :m_option<>cléPublique.NonCompresséeHistorique ALORS
+      	// défaut
+      	renvoyer m_publicKey.versbufferCompressé()
+      sinon
+      	// ancien format non compressé
+      	RENVOYER m_publicKey.versbufferNonCompressé()
+      fin
+     type : 458752
+   -
+     name : publicAddress
+     procedure_id : 1873316360593419878
+     type_code : 12
+     code : |1+
+      // renvoie l'adresse publique du compte au format chaine encodée 58
+      // ex : 162ABzt3EUm54RWskUBvMasg46xV3ErabG
+      // bCompress : indique si on veut le format compressée, cad uniquement avec X. 
+      // prendra moins de place dans la signature mais l'adresse fait 2 octets de plus.
+      procédure publicAddress() : chaine
+      
+      // 0x00 : Main Net, Pubkey hash (P2PKH address), ex 17VZNX1SN5NtKa8UQFxwQbFeFc3iqRYhem
+      byteVersion est un entier =cléPublique::nGetByteVersionFromNetwork( m_nNetwork, m_option)
+      
+      // si on a été initialisé avec que le hash 160 de l'adresse
+      SI m_hash160Only<>"" ALORS
+      	sAddresseEncoded160 est chaine = encodeBASE58Check( m_hash160Only, byteVersion  )  
+      	RENVOYER sAddresseEncoded160
+      FIN
+      
+      // calcul buffer raw de la clé publique
+      sPubaddr est  buffer = m_publicKey.versAdresse160Bits( m_option  )
+      
+      //
+      //// encodage en base 58 + CRC
+      sAddresseEncoded est chaine = encodeBASE58Check( sPubaddr, byteVersion  )  
+      renvoyer sAddresseEncoded
+     type : 458752
+   -
+     name : getBtcAddr
+     procedure_id : 2029154112377684318
+     type_code : 12
+     code : |1+
+      // renvoie l'adresse au format objet <btcAddr>
+      procédure getBtcAddr() : Adresse
+      
+      res est Adresse
+      SI m_hash160Only<>"" ALORS
+      	res.bInitFromRaw160Bit( m_hash160Only, m_nNetwork, m_option)
+      sinon
+      	// Init a partir de la clé publique sérialisée
+      	res.bInitFromRaw160Bit( :m_publicKey.versAdresse160Bits(m_option), m_nNetwork, m_option )
+      fin
+      
+      
+      renvoyer res
+     type : 458752
+   -
+     name : privatekeyFormatRawChaineHexa
+     procedure_id : 1911817705883234447
+     type_code : 12
+     code : |1+
+      procédure privatekeyFormatRawChaineHexa() : VariableProtégée
+      
+      // Récup de la clée privée en clair
+      cléPrivée est Entier256 
+      :m_privateKey.GetValeurSecret_ADetruireRapidement(cléPrivée)
+      sBuf est un buffer = cléPrivée.versbuffer( Entier256::BUF_BIG_ENDIAN )
+      dbgAssertion( Taille(sBuf) = 32 )
+      VariableProtégée::DetruitSecret( cléPrivée )
+      
+      // convertion en hexa sans espaces
+      résultatHexaEnClair est chaine = BufferVersHexaSansEspace(sBuf)
+      // on renvoie une version protégée
+      résultat est VariableProtégée( m_privateKey.getProcDonneClé() )
+      résultat.SetValeurSecret( résultatHexaEnClair )
+      VariableProtégée::DetruitSecret( résultatHexaEnClair )
+      
+      renvoyer résultat
+      
+      
+     type : 458752
+   -
+     name : privateKeyFormaWIF
+     procedure_id : 1873480333855013968
+     type_code : 12
+     code : |1-
+      // renvoie la clé privée au forma WIF.
+      // voir https://en.bitcoin.it/wiki/Wallet_import_format
+      // ex : 5HueCGU8rMjxEXxiPuD5BDk_SAMPLE_PRIVATE_KEY_DO_NOT_IMPORT_u4MkFqeZyd4dZ1jvhTVqvbTLvyTJ
+      procédure privateKeyFormaWIF() : VariableProtégée
+      
+      // le buffer WIF 
+      
+      // réciup clé privée en clair
+      cléPrivée est Entier256 
+      :m_privateKey.GetValeurSecret_ADetruireRapidement(cléPrivée)
+      sBufCléPrivéeEnClair est un buffer = cléPrivée.versbuffer( Entier256::BUF_BIG_Endian )
+      dbgAssertion( Taille(sBufCléPrivéeEnClair) = 32 )
+      VariableProtégée::DetruitSecret( cléPrivée )
+      
+      
+      nPrefix est entier = 0
+      selon m_nNetwork
+      	CAS BtcNet_Main
+      		nPrefix = PREFIX_PrivateKey_WIF_MainNet 
+      	CAS BtcNet_Test
+      		nPrefix = PREFIX_PrivateKey_WIF_TestNet 
+      	CAS BtcNet_Simu
+      		nPrefix = PREFIX_PrivateKey_WIF_SimNet 
+      	CAS BtcNet_TestAuto
+      		nPrefix = PREFIX_PrivateKey_WIF_AutoTest 
+      FIN
+      dbgAssertion(nPrefix<>0)
+      // +suffixe 0x1 pour le cas des comptent qui doivent générer des clés publiques compressées
+      //NB : c'est en suffixe si on affiche en Hexa, format Big endian
+      bCompressed est un booléen = :m_option<>cléPublique.NonCompresséeHistorique
+      si bCompressed ALORS
+      	sBufCléPrivéeEnClair += Caract( 0x01 )
+      FIN
+      
+      // encodage au format base 58 + crc
+      sAddresseEncodedWif est chaine = encodeBASE58Check( sBufCléPrivéeEnClair, nPrefix  )  
+      VariableProtégée::DetruitSecret( sBufCléPrivéeEnClair )
+      
+      // on renvoie une version protégée/cryptée
+      résultat est VariableProtégée( m_privateKey.getProcDonneClé() )
+      résultat.SetValeurSecret( sAddresseEncodedWif )
+      VariableProtégée::DetruitSecret( sBufCléPrivéeEnClair )
+      
+      RENVOYER résultat
+     type : 458752
+   -
+     name : bcreateFromHash160OfPublicKey
+     procedure_id : 1904031960980601695
+     type_code : 12
+     code : |1-
+      procédure bcreateFromHash160OfPublicKey( bufHash160 buffer,  nNetwork BtcNetwork )
+      
+      // Init network
+      m_nNetwork =nNetwork
+      
+      // NB /x,y restent inconnu
+      m_hash160Only = bufHash160
+      
+      renvoyer vrai
+     type : 458752
+   -
+     name : bcreateFromPublicKey_UNUSED
+     procedure_id : 1884646621871739349
+     type_code : 12
+     code : |1+
+      //  nNetwork : BtcNet_Main ou BtcNet_Test
+      Procédure bcreateFromPublicKey_UNUSED( bufSPubKey buffer,  nNetwork BtcNetwork )
+      
+      // Init network
+      m_nNetwork =nNetwork
+      
+      // init x,Y
+      cFormat est entier = Asc(bufSPubKey[1])
+      selon cFormat
+      	cas 1: 
+      		// adresse non compressé (ancien format)
+      		// x,y
+      		dbgAssertion(taille(bufSPubKey)>64)
+      		m_option = cléPublique.NonCompresséeHistorique
+      		// affectation de x et y
+      		si pas m_publicKey.initDepuisBufferNonCompressé(bufSPubKey) ALORS
+      			// echec
+      			renvoyer FAUX
+      		FIN
+      	
+      	CAS 2,3
+      		// Adrese commpressé avec 2/3 + X uniquement. Y est déduis par calcul
+      		m_option = cléPublique.Compressée
+      		// affectation de x et calcul de y
+      		SI PAS m_publicKey.initDepuisBufferCompressé(bufSPubKey) ALORS
+      			// echec
+      			RENVOYER Faux
+      		FIN
+      
+      	AUTRE CAS
+      		dbgAssertion(faux, "format invalide ?")
+      		renvoyer faux
+      FIN
+      
+      renvoyer vrai
+     type : 458752
+   -
+     name : signerAvecLaCléPrivée
+     procedure_id : 1912145222912277002
+     type_code : 12
+     code : |1+
+      // signe un buffer et renvoyer la signature au format DER, qui est format requis pour signer une transaction bitcoin
+      // https://fr.wikipedia.org/wiki/Distinguished_Encoding_Rules
+      procédure signerAvecLaCléPrivée( buf est buffer, signature_OUT SignatureECDSA  ) : booléen
+      
+      // on signe le hash du buffer <buf>
+      hash est entier256  
+      sh256 est un buffer = sha2_256(sha2_256(buf))
+      hash.affecteAvecBuffer( sh256, Entier256::BUF_BIG_ENDIAN )
+      
+      
+      // =>Signer <hash> avec <privateKey>
+      Signature est signatureECDSA
+      cléPrivée est un entier256
+      :m_privateKey.GetValeurSecret_ADetruireRapidement(cléPrivée)
+      Signature = ECDSA_Bitcoin.SigneNombre(hash, cléPrivée)
+      VariableProtégée::DetruitSecret( cléPrivée )
+      
+      // si echec
+      si Signature.R.estEgalAZero() _ou_ Signature.S.estEgalAZero() ALORS
+      	dbgAssertion(Faux,"Echec de ECDSA_SignWithPrivateKey")
+      	RENVOYER faux // échec
+      FIN
+      
+      // OK
+      // on renvoie le couple (R,S) qui constitue la signature
+      signature_OUT = Signature
+      renvoyer  vrai
+     type : 458752
+   -
+     name : bPossèdeLaCléPrivéePour
+     procedure_id : 1912262750364042738
+     type_code : 12
+     code : |1+
+      PROCEDURE bPossèdeLaCléPrivéePour( addr est Adresse) : booléen
+      
+      // si on a que la hash
+      si m_hash160Only<>"" ALORS
+      	renvoyer faux
+      FIN
+      
+      //@A a optimiser
+      si publicAddress() = addr.versTexteIhm() alors
+      	// trpuvé
+      	renvoyer vrai
+      fin
+      
+      
+      
+      renvoyer faux
+      
+      
+      
+     type : 458752
+   -
+     name : _nGetNetworkFromPrefix
+     procedure_id : 1914448613902759470
+     type_code : 12
+     code : |1+
+      // renvoie le type de réseau en fonction du préfixe encodé
+      PROCEDURE _nGetNetworkFromPrefix( nPrefixe entier ) : BtcNetwork
+      
+      
+      SELON nPrefixe 
+      	CAS  PREFIX_PrivateKey_WIF_MainNet
+      		renvoyer  BtcNet_Main
+      	CAS PREFIX_PrivateKey_WIF_TestNet
+      		RENVOYER  BtcNet_Test
+      	CAS PREFIX_PrivateKey_WIF_SimNet
+      		RENVOYER  BtcNet_Simu
+      	CAS PREFIX_PrivateKey_WIF_AutoTest
+      		RENVOYER  BtcNet_TestAuto		
+      	AUTRES CAS
+      		dbgAssertion(Faux)
+      		RENVOYER BtcNet_Main
+      FIN
+     type : 458752
+   -
+     name : bcreateFromWif
+     procedure_id : 1924854374804249321
+     type_code : 12
+     code : |1+
+      procédure bcreateFromWif( sWIF est chaine, bCalculeCléPublique est un booléen , sErreur_OUT chaine ) : booléen
+      
+      // convertion chaine  Base58 vers buffer
+      nPrefixe est un entier
+      
+      
+      sBufRaw est un buffer =  decodeBASE58Check(sWIF, nPrefixe , sErreur_OUT )
+      // si erreur
+      si sBufRaw="" ALORS
+      	RENVOYER faux
+      FIN
+      // le préfixe doit être 0x80 ou 0xEF (testnet)
+      si 	   nPrefixe<>PREFIX_PrivateKey_WIF_MainNet ...
+        _ET_ nPrefixe<>PREFIX_PrivateKey_WIF_TestNet ...
+        _et_ nPrefixe<>PREFIX_PrivateKey_WIF_SimNet  ...
+        _et_ nPrefixe<>PREFIX_PrivateKey_WIF_AutoTest ALORS
+      	sErreur_OUT = "Préfixe invalide"
+      	renvoyer faux
+      FIN
+      nTaille est un entier = taille(sBufRaw)
+      // cas du WIF compressed
+      SI nTaille <> 32 _et_ nTaille<> 33 ALORS
+      	sErreur_OUT = "Taille invalide"
+      	RENVOYER Faux
+      FIN
+      bCompress est un booléen 
+      // cas du WIF compressed
+      si nTaille = 33 ALORS
+      	// le dernier octet doit être 1
+      	si sBufRaw[[33]]<>caract(0x01) ALORS
+      		sErreur_OUT = "Suffixe invalide"
+      		RENVOYER Faux
+      	FIN
+      	// OK on retire le suffixe
+      	bCompress = vrai
+      	sBufRaw = gauche(sBufRaw,32)
+      FIN
+      
+      // sBufRaw est en BIG Endian (poids fort au début)
+      // on en déduit la clé privée 
+      cléPrivée est entier256 
+      cléPrivée.affecteAvecBuffer( sBufRaw, Entier256::BUF_BIG_ENDIAN ) 
+      m_privateKey.SetValeurSecret( cléPrivée )
+      si bCalculeCléPublique alors
+      	// init des clé publiques a partir de privateKey
+      	m_publicKey.initDepuisCléPrivée(  cléPrivée )
+      fin
+      
+      // SECURITE : on s'assure que plus rien en clair ne permet d'obtenir la clé privée
+      VariableProtégée::DetruitSecret( cléPrivée )
+      VariableProtégée::DetruitSecret( sBufRaw )
+      
+      // noter pour quel réseau et si on génère des clés publiques compressées 
+      m_nNetwork    = _nGetNetworkFromPrefix(nPrefixe)
+      m_option	  = cléPublique.Compressée // défaut
+      si pas bCompress ALORS
+      	// vieux format
+      	m_option= cléPublique.NonCompresséeHistorique
+      FIN
+      
+      //succes
+      RENVOYER Vrai
+      
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x19ff556f0104420d
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

@@ -1,0 +1,332 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : btcMontant
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1a82922b0131cfc9
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1-
+      // représente une quantité de bitcoin 
+      // permet de gére les unités et d'éviter les erreurs de conversions.
+      btcMontant est une Classe
+      privé
+      	// montant en satoshi = 1 / 100 000 000 BTC.
+      	m_nNbSatoshi est un entier sur 8
+      	
+      	
+      	global
+      		// unité préférée pour représenter les montants
+      		m_sUnitePéférée est EUnitéMontant
+      		//@TODO
+      		m_sTauxDeChange est entier = 3 500 
+      	public
+      		// constante pour un montant de 0 btc
+      		_0 est btcMontant 
+      		
+      		
+      FIN
+      
+      EUnitéMontant est Enumération  
+      	Satoshi  = 1	
+      	Bits	 = 2	// MicroBtc
+      	MilliBtc = 3
+      	Bitcoin  = 4
+      	Fiat   	 = 5	//  conversion en Euro, USD, ...
+      	Invalide = -1
+      FIN
+      
+      constant SNomUnite_SATOCHI = "sat"
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 1910249905359867849
+     type_code : 27
+     code : |1-
+      PROCEDURE Constructeur()
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 1910249905359933385
+     type_code : 28
+     code : |1-
+      PROCEDURE Destructeur()
+     type : 655360
+   -
+     name : SetEnSatoshi
+     procedure_id : 1910251975542648106
+     type_code : 12
+     code : |1+
+      // Init a partir d'une valeur en Satoshi
+      procédure SetEnSatoshi( local n est entier sur 8)
+      dbgAssertion(n>=0)
+      m_nNbSatoshi = n
+     type : 458752
+   -
+     name : SetEnMicroBtc
+     procedure_id : 2060521654556282321
+     type_code : 12
+     code : |1+
+      // Init a partir d'une valeur en micro bitcoin (bits)
+      procédure SetEnMicroBtc( n )
+      
+      dbgAssertion(n>=0)
+      m_nNbSatoshi = n * 100
+     type : 458752
+   -
+     name : SetEnMilliBit
+     procedure_id : 1919550154647541145
+     type_code : 12
+     code : |1-
+      // Init a partir d'une valeur en milli Bitcoin
+      PROCÉDURE SetEnMilliBit( LOCAL n )
+      dbgAssertion(n>=0)
+      m_nNbSatoshi = n * 100 000
+     type : 458752
+   -
+     name : SetEnBtc
+     procedure_id : 1910628231869949479
+     type_code : 12
+     code : |1+
+      // Init a partir d'une valeur en Satoshi
+      procédure SetEnBtc( LOCAL r est un réel)
+      dbgAssertion(r>=0)
+      m_nNbSatoshi = r * 100 000 000.0
+     type : 458752
+   -
+     name : SetSelonUnité
+     procedure_id : 2060519988108845929
+     type_code : 12
+     code : |1+
+      procédure SetSelonUnité( valeur , unité EUnitéMontant )
+      
+      // selon  l'unitée sélectionnée
+      SELON unité
+      	CAS btcMontant.Satoshi
+      		SetEnSatoshi(  valeur)
+      	CAS btcMontant.Bits
+      		SetEnMicroBtc( valeur)
+      	CAS btcMontant.MilliBtc
+      		SetEnMilliBit( valeur)
+      	CAS btcMontant.Bitcoin
+      		SetEnBtc(      valeur)
+      	CAS btcMontant.Fiat
+      		SetEnFiat(    valeur )
+      	CAS btcMontant.Invalide
+      		// Invalide !
+      		dbgAssertion(Faux)
+      		SetEnSatoshi( 0 )
+      FIN
+     type : 458752
+   -
+     name : versValeurSelonUnité
+     procedure_id : 2060521126275247496
+     type_code : 12
+     code : |1+
+      //renvoie le montant dans l'unité <unité>
+      Procédure versValeurSelonUnité(  unité EUnitéMontant )
+      
+      SELON unité
+      	CAS btcMontant.Satoshi
+      		renvoyer enSatoshi()
+      	CAS btcMontant.Bits
+      		RENVOYER enMicroBTC()
+      	CAS btcMontant.MilliBtc
+      		renvoyer enMilliBTC()
+      	CAS btcMontant.Bitcoin
+      		renvoyer enBTC()
+      	CAS btcMontant.Fiat
+      		RENVOYER enFiat()
+      	CAS btcMontant.Invalide
+      		dbgAssertion(Faux)
+      		RENVOYER 0
+      FIN
+     type : 458752
+   -
+     name : enBTC
+     procedure_id : 1910250515245366459
+     type_code : 12
+     code : |1-
+      Procédure enBTC( ) : réel 
+      renvoyer m_nNbSatoshi / 100 000 000
+     type : 458752
+   -
+     name : enMilliBTC
+     procedure_id : 1910250940447161681
+     type_code : 12
+     code : |1-
+      PROCÉDURE enMilliBTC( ) : réel
+      RENVOYER m_nNbSatoshi / 100 000.0
+     type : 458752
+   -
+     name : enMicroBTC
+     procedure_id : 1910251047821435382
+     type_code : 12
+     code : |1+
+      PROCÉDURE enMicroBTC( ) : réel
+      RENVOYER m_nNbSatoshi / 100.0
+     type : 458752
+   -
+     name : enSatoshi
+     procedure_id : 1910251168080547608
+     type_code : 12
+     code : |1+
+      PROCÉDURE enSatoshi( ) : entier sur 8
+      RENVOYER m_nNbSatoshi 
+     type : 458752
+   -
+     name : enFiat
+     procedure_id : 2060523084780724889
+     type_code : 12
+     code : |1+
+      procédure enFiat() : monétaire
+      
+      renvoyer enSatoshi() * m_sTauxDeChange / 10 000 000
+     type : 458752
+   -
+     name : SetEnFiat
+     procedure_id : 2060523269464362507
+     type_code : 12
+     code : |1-
+      PROCÉDURE SetEnFiat( val monétaire)
+      
+      :m_nNbSatoshi = val * 10 000 000 / m_sTauxDeChange
+     type : 458752
+   -
+     name : _sVersChaineSansCadrage
+     procedure_id : 1922227757474440737
+     type_code : 12
+     code : |1-
+      PROCEDURE _sVersChaineSansCadrage() : chaîne
+      
+      sVal est chaine 
+      
+      sVal = gPolice("Terminal")
+      
+      nVal est entier sur 8 = enSatoshi()
+      SI nVal =0 ALORS
+      	// Vide
+      	RENVOYER sVal + gPoliceTaille(9) + "0"
+      FIN
+      
+      nNbBTC     est un entier sur 8=  nVal / 100 000 000
+      nNbMilli   est un entier sur 8=  (nVal -  nNbBTC * 100 000 000) / 100 000 
+      //nNbMicro   est un entier sur 8=  (nVal -  nNbBTC * 100 000 000 - nNbMilli * 100 000 ) / 100 
+      nNbSatoshi est un entier sur 8=  nVal -  nNbBTC * 100 000 000 - nNbMilli * 100 000
+      
+      
+      
+      
+      sFormatMilli   est chaine = gStylo(RGB(40,40,40))  +gPoliceTaille(11)
+      sFormatSatochi est chaine = gStylo(rgb(80,80,80))  +gPoliceTaille(8)
+      
+      // plus de 1 BTC
+      si nVal >= 100 000 000 ALORS
+      
+      	sVal +=  gPoliceTaille(14) + NumériqueVersChaîne( nNbBTC, ".0S") +  " BTC "
+      	si nNbMilli>0 alors
+      		sVal +=  sFormatMilli + NumériqueVersChaîne(nNbMilli,"03.0S") 
+      	sinon si nNbSatoshi>0 alors
+      		sVal +=  sFormatSatochi + NumériqueVersChaîne(nNbSatoshi,".0S" + "  " + SNomUnite_SATOCHI) 
+      	fin
+      	renvoyer  sVal 
+      FIN
+      
+      // plus de 1 milli
+      si nVal >= 100 000 ALORS
+      	
+      	sVal += 	 sFormatMilli + NumériqueVersChaîne( nNbMilli, "03.0S")  + " mBTC "
+      	si nNbSatoshi>0 alors
+      		sVal +=  sFormatSatochi + NumériqueVersChaîne(nNbSatoshi,".0S") + " " + SNomUnite_SATOCHI
+      	FIN
+      	RENVOYER sVal
+      fin
+      
+      
+      sVal  +=  sFormatSatochi + NumériqueVersChaîne( nNbSatoshi, ".0S") + " " + SNomUnite_SATOCHI  
+      
+      renvoyer sVal
+     type : 458752
+   -
+     name : VersChaine
+     procedure_id : 1926177310855352210
+     type_code : 12
+     code : |1+
+      PROCEDURE VersChaine() : chaîne
+      
+      renvoyer gcadrage( "D", _sVersChaineSansCadrage() )
+     type : 458752
+   -
+     name : VersChaineDump
+     procedure_id : 2057931704645921003
+     type_code : 12
+     code : |1-
+      procédure VersChaineDump()
+      
+      nNbSatoshi est un entier sur 8 octets = :m_nNbSatoshi
+      renvoyer NumériqueVersChaîne( nNbSatoshi, ".0S") + " " + SNomUnite_SATOCHI 
+     type : 458752
+   -
+     name : bEstZero
+     procedure_id : 1928059283802248378
+     type_code : 12
+     code : |1+
+      PROCEDURE bEstZero()
+      
+      renvoyer m_nNbSatoshi = 0
+      
+      
+     type : 458752
+   -
+     name : nCompareValeur
+     procedure_id : 1959000640711358468
+     type_code : 12
+     code : |1+
+      PROCÉDURE nCompareValeur( j2 btcMontant ) : entier
+      	SI m_nNbSatoshi < j2.m_nNbSatoshi ALORS RENVOYER 1
+      	SI m_nNbSatoshi > j2.m_nNbSatoshi ALORS RENVOYER -1
+      	// egaux
+      	renvoyer 0
+     type : 458752
+   -
+     name : setUnitéPréférée
+     procedure_id : 2030860315536917476
+     type_code : 12
+     code : |1+
+      // Modif unité préférée pour représenter les montants
+      procédure globale setUnitéPréférée( unité est EUnitéMontant)
+      
+      m_sUnitePéférée = unité
+     type : 458752
+   -
+     name : getUnitéPréférée
+     procedure_id : 2031961240459362370
+     type_code : 12
+     code : |1+
+      // Modif unité préférée pour représenter les montants
+      procédure globale getUnitéPréférée() : EUnitéMontant
+      
+      
+      renvoyer m_sUnitePéférée 
+      
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1a829226012ebc9f
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

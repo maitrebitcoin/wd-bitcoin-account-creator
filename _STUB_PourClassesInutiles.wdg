@@ -1,0 +1,42 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : _STUB_PourClassesInutiles
+ major_version : 25
+ minor_version : 0
+ type : 7
+ description : ""
+ subtype : 0
+procedure_set :
+ identifier : 0x1cde562a124d368f
+ internal_properties : BQAAAAUAAABGLu41kG7fjQV3iS4F72qmnKaNh5694reolNKIW0iw
+ code_elements :
+  type_code : 31
+  p_codes :
+   -
+     code : |1-
+      // permet de déclarer les classes non utilisées par ce projet
+      // mais nécessaires a la compilation 
+      
+      BaseBitcoinLocale est une Interface
+      	Procédure rechechercheJetonParId(id)
+      	Procédure VisiteEntreeTransaction(hashTransaction hash256, proc est Procédure )
+      	Procédure VisiteSortieTransaction(hashTransaction hash256, proc est Procédure)
+      	Procédure VisiteJetonParAdresse( Adresse, proc  )
+      	Procédure bTransactionEstCoinbase(hashTransaction)
+      FIN
+      
+      Consensus est une Interface
+      	Procédure bJetonPeutEtreDépense( jetonI, sErreur_OUT )
+      	Procédure getbitsGenesys(  )
+      fin
+     type : 720896
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : COL_SansNom1
+resources :
+ string_res :
+  identifier : 0x1cde560b124bbfb9
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

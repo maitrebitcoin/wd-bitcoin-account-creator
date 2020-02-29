@@ -1,0 +1,278 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : bitcoinTransaction
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1a113a1e02603024
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      bitcoinTransaction est une Classe
+      	m_clVar est variant // info au format variant / .ex m_clVar.tx_in[2]
+      	m_sRaw est buffer // version binaire format réseau
+      
+      FIN
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 1878346420153561124
+     type_code : 27
+     code : |1+
+      PROCEDURE Constructeur()
+      
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 1878346420153626660
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+      
+     type : 655360
+   -
+     name : fromBuffer
+     procedure_id : 1878346531822868674
+     type_code : 12
+     code : |1+
+      // init a partir d'un buffer s revu d'un peer
+      PROCEDURE fromBuffer(s buffer, nTailleLue_OUT est un entier=0)
+      
+      // regarde si le block contient une zone witnewss (segwit support)
+      bWitness est booléen = ( s[[5]]=caract(0) et s[[6]]=caract(1))
+      sBufSauve est un buffer = s
+      si bWitness alors
+      	m_clVar = bitcoinRawFormat.gcConvTxPlusWt.binToVariant(s, binBuffer::OPT_RenvoieTailleLue, nTailleLue_OUT)
+      sinon	
+      	m_clVar = bitcoinRawFormat.gcConvTx.binToVariant(s, binBuffer::OPT_RenvoieTailleLue, nTailleLue_OUT)
+      fin
+      // affection avec la bonne taille une fois connue
+      m_sRaw = gauche(sBufSauve ,nTailleLue_OUT)
+     type : 458752
+   -
+     name : versBuffer
+     procedure_id : 2033457566441013993
+     type_code : 12
+     code : |1+
+      procédure versBuffer()
+      si m_sRaw="" ALORS
+      	m_sRaw = bitcoinRawFormat.gcConvTx.variantToBin( m_clVar )
+      FIN
+      
+      dbgAssertion(m_sRaw<>"")
+      renvoyer m_sRaw
+     type : 458752
+   -
+     name : sGetHeader
+     procedure_id : 1883580095519394556
+     type_code : 12
+     code : |1-
+      procédure sGetHeader() : buffer
+      
+      //Version	Block version number	You upgrade the software and it specifies a new version	4
+      //hashPrevBlock	256-bit hash of the previous block header	A new block comes in	32
+      //hashMerkleRoot	256-bit hash based on all of the transactions in the block	A transaction is accepted	32
+      //Time	Current timestamp as seconds since 1970-01-01T00:00 UTC	Every few seconds	4
+      //Bits	Current target in compact format	The difficulty is adjusted	4
+      //Nonce	32-bit number (starts at 0)	A hash is tried (increments)	4
+      // NB :96 = 4 + 32 +32 + 4 +4 +4
+      renvoyer gauche(m_sRaw, 96)
+     type : 458752
+   -
+     name : hGetHash
+     procedure_id : 1883627035265191181
+     type_code : 12
+     code : |1+
+      PROCEDURE hGetHash()
+      
+      
+      hRes est hash256
+      hRes.calcShaSha(versBuffer())
+      
+      renvoyer hRes
+     type : 458752
+   -
+     name : nGetNbEntrée
+     procedure_id : 1883666974172492226
+     type_code : 12
+     code : |1-
+      PROCEDURE nGetNbEntrée() : entier
+      
+      renvoyer TableauOccurrence(m_clVar.tx_in)
+     type : 458752
+   -
+     name : clGetVariantEntréeAt
+     procedure_id : 1883668447346421474
+     type_code : 12
+     code : |1+
+      procédure clGetVariantEntréeAt(n est un entier)
+      
+      renvoyer m_clVar.tx_in[n]
+     type : 458752
+   -
+     name : IDJetonEntréeAt
+     procedure_id : 2054716633421276673
+     type_code : 12
+     code : |1+
+      // renvoie l'ID du jeton consommé par la transaction
+      procédure IDJetonEntréeAt(n entier) : IDJeton
+      soit clIntpuI <- m_clVar.tx_in[n]
+      // construit un jeton pour l'entrée 
+      idJetonI est IDjeton
+      idJetonI.hashTxSortie.fromHashAsBuffer( clIntpuI.previous_output.hash )
+      idJetonI.index  					  = clIntpuI.previous_output.index
+      renvoyer idJetonI
+     type : 458752
+   -
+     name : getScriptDéverouillageEntreeAt
+     procedure_id : 2062394079673579639
+     type_code : 12
+     code : |1-
+      // renvoie le script "clé" qui déverouille la dépense de l'entrée <n>
+      procédure getScriptDéverouillageEntreeAt( n entier ) : buffer
+      
+      soit clIntpuI <- m_clVar.tx_in[n]
+      scriptClé est buffer= clIntpuI.signature_script
+      RENVOYER scriptClé
+     type : 458752
+   -
+     name : nGetOutput
+     procedure_id : 1883667218985685316
+     type_code : 12
+     code : |1+
+      PROCÉDURE nGetOutput() : entier
+      
+      RENVOYER TableauOccurrence(m_clVar.tx_out )
+     type : 458752
+   -
+     name : clGetOutputAt
+     procedure_id : 1883668533245787253
+     type_code : 12
+     code : |1-
+      procédure clGetOutputAt(n est un entier)
+      
+      renvoyer m_clVar.tx_out[n]
+     type : 458752
+   -
+     name : IsValid
+     procedure_id : 1930286825782904773
+     type_code : 12
+     code : |1+
+      PROCEDURE IsValid(sErreur_OUT est chaine="") : booléen
+      
+      // au moins 1 entrée
+      si nGetNbEntrée()<=0 ALORS
+      	sErreur_OUT ="Transaction sans entrées"
+      	renvoyer faux
+      FIN
+      // au moins 1 sortie
+      SI nGetOutput()<=0 ALORS
+      	sErreur_OUT ="Transaction sans sorties"
+      	RENVOYER Faux
+      FIN
+      
+      // frais positif ou nulls
+      //frais est btcMontant = rechechercheJetonParId()
+      //si frais.enSatoshi()<0 ALORS
+      //	sErreur_OUT ="Transaction qui dépense plus que la somme de entrée." + frais.enSatoshi()
+      //	renvoyer faux
+      //FIN
+      
+      //TODO : verif approfondie
+      
+      renvoyer vrai
+     type : 458752
+   -
+     name : GetFrais
+     procedure_id : 1961100317411992205
+     type_code : 12
+     code : |1+
+      Procédure GetFrais( bdd est BaseBitcoinLocale ) : btcMontant
+      
+      // parcourt des entrée
+      nTotalEntree est un entier sur 8 octets
+      POUR i = 1 _a_ nGetNbEntrée()
+      	//soit entreeI <- clGetInputAt(i)
+      	// retrouver la valeur du jeton associé a cette entrée
+      	id est IDJeton = IDJetonEntreéAt(i)
+      	j est jeton = bdd.rechechercheJetonParId(id)
+      	dbgAssertion( j.ID.hashTxSortie.m_h = id.hashTxSortie.m_h )
+      	nTotalEntree += j.montant.enSatoshi()
+      fin
+      // parcourt des sorties
+      nTotalSortie est un entier sur 8 octets
+      POUR i = 1 _a_ nGetOutput()
+      	soit sortieI <- clGetOutputAt(i)
+      	nTotalSortie += sortieI.value
+      FIN
+      
+      frais est btcMontant
+      frais.SetEnSatoshi( nTotalEntree - nTotalSortie  )
+      renvoyer  frais
+     type : 458752
+   -
+     name : InitPourCoinBase
+     procedure_id : 2032707283187970885
+     type_code : 12
+     code : |1+
+      // Init d'un transacation comme 1er d'un bloc = récompense de minage.
+      procédure InitPourCoinBase(destRécompenseMinage Adresse, valeur est btcMontant, hauteur est entier )
+      
+      sigScript est un buffer
+      sigScript += caract(3) // PUSH 3
+      // hauteur sur 24 bits low endian
+      sigScript += gauche(UI4ToBufferLowEndian(hauteur), 3)
+      // 20 octets "libres"
+      sigScript += Répète( Caract(0), 20)
+      
+      // entrée spécifique a la transaction coinbase
+      _0 est hash256
+      TxEntree est un variant
+      TxEntree.previous_output.hash  = _0.toBufferLowEndian()
+      TxEntree.previous_output.index = 0xFFFFFFFF
+      TxEntree.script_length		   = taille(sigScript) // 0x18
+      TxEntree.signature_script      = sigScript //Répète( Caract(0), 24)
+      TxEntree.sequence			   = 0xFFFFFFFF	 
+      
+      
+      // script pour paiement a l'adresse <destRécompenseMinage>
+      binscript est un buffer = script.sGenere_PaieAddr( destRécompenseMinage )
+      
+      // Sortie de la transaction :
+      //8 :value				:int64	  					:Transaction Value
+      //? :pk_script_length		:var_int 					:Length of the pk_script
+      //? :pk_script			:uchar[pk_script_length] 	:Usually contains the public key as a Bitcoin script setting up conditions to claim this output.
+      sortie est un variant
+      sortie.value 		    = valeur.enSatoshi()// 50 * 100 000 000 // 50 Btc
+      sortie.pk_script	    = binscript
+      sortie.pk_script_length = taille(sortie.pk_script	)
+      
+      
+      // init variant
+      m_clVar.version	      = 1
+      m_clVar.tx_in_count   = 1 
+      m_clVar.tx_in[1]	  = TxEntree
+      m_clVar.tx_out_count  = 1
+      m_clVar.tx_out[1]     = sortie
+      m_clVar.lock_time 	  = 0
+      
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1a113a14025d08f5
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

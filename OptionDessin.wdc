@@ -1,0 +1,79 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : OptionDessin
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1d861e280054cefd
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      
+      // option de dessin de l'adresse privée/publique
+      OptionDessin est une Classe
+      	zoom est un réél double // niveau de zomm 1.0 = aucune
+      	// pour partie publique
+      	bImageFondPublique est un booléen // mettre une image de fond dans la partie publique ?
+      	typeAddr  est un PortefeuilleHDBip32::typeDérivation 	
+      	fonteAddr est une police // police de l'adresse publique en bas.
+      	// pour partie privée
+      	securité est NiveauSécurité 
+      	bMotsPrive          est un booléen // dessiner les mots dans la partie privée
+      	bQRCodePrive        est un booléen // dessiner un qr code dans la partie privée ?
+      	bMarqueMotDePasse   est un booléen // dessiner un label "protégé par mot de passe" dans la partie privée
+      	nbMot				est un entier  // nb de mot a dessiner
+      	// pour l'état : pour afficher le chemin de dérivation utilisé car pas de nb de version dans le BIP39 (au cas ou...)
+      	sCheminDérivation  est chaine
+      
+          // pour imprimer un état vierge a remplir a la main
+      	bPourEtatVierge est un booléen 
+      FIN
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 2127421031132286717
+     type_code : 27
+     code : |1+
+      PROCEDURE Constructeur( _param est un ParamApp)
+      
+      zoom		 	   = 2.0  // pour avoir un meilleur rendu a l'impression
+      typeAddr 		   = FEN_Principale._getTypeDérivation()
+      bImageFondPublique = vrai // _param.bAvecImprimante
+      securité    	   = _param.securité
+      bQRCodePrive 	   = (securité = secBasique) _et_ _param.bAvecImprimante
+      bMotsPrive    	   = (securité = secBasique)
+      bMarqueMotDePasse  = _param.bAvecMotDePasse 
+      nbMot			   = 12
+      
+      fonteAddr..Nom    = "consolas"
+      fonteAddr..Taille = 11
+      fonteAddr..Gras   = Vrai
+      
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 2127421031132352253
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+      
+     type : 655360
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1d861d3400461754
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

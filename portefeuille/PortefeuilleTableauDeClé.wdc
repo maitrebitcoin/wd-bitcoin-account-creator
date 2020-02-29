@@ -1,0 +1,385 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : PortefeuilleTableauDeClé
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1c2890870b8c7bd8
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      // portefeuille au  format "bunch of keys" de bitcoin core initial.
+      PortefeuilleTableauDeClé est une Classe
+      	herite de portefeuilleBase
+      
+      	// tableau des clés prives/publiques
+      	m_TabKey est un tableau de btcAccount dynamique
+      	
+      
+      FIN
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 2029030541819214808
+     type_code : 27
+     code : |1+
+      PROCEDURE Constructeur()
+      
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 2029030541819280344
+     type_code : 28
+     code : |1-
+      PROCEDURE Destructeur()
+      // vider par sécurité, probablement pas utile
+      TableauSupprimeTout(m_TabKey)
+     type : 655360
+   -
+     name : getAdressePourReceptionDeFond
+     procedure_id : 2029088017361382587
+     type_code : 12
+     code : |1+
+      // renvoyer une adresse pour le change
+      PROCÉDURE virtuelle getAdressePourReceptionDeFond() : Adresse
+      
+      // si plus de clé dispo
+      si m_nMaxAddrePubliee>= m_TabKey.Occurrence() ALORS
+      	// créer 1 clé
+      	//POUR i=1 a 5
+      	nouveauCompte est  btcAccount dynamique = allouer un btcAccount
+      	nouveauCompte.bcreateNewAccount( m_nTypeNet )
+      	m_TabKey.Ajoute(nouveauCompte)
+      	//FIN
+      	// re-sauver le portefeuille
+      	bEcrasementAutorisee est un booléen = vrai
+      	si pas bSauve(bEcrasementAutorisee) ALORS
+      		dbgAssertion(faux,"Impossible de sauver")
+      		TableauSupprime(m_TabKey, m_TabKey.Occurrence())
+      	FIN
+      	
+      FIN
+      
+      
+      // renvoie 1 adresse encore jamais publiée
+      res est Adresse = getAdrresseAt( m_nMaxAddrePubliee  + 1)
+      
+      RENVOYER res
+      
+     type : 458752
+   -
+     name : getAdrresseAt
+     procedure_id : 2029088622951846803
+     type_code : 12
+     code : |1+
+      // récupéer une des adressses publique du portefeuille par indice
+      procédure getAdrresseAt( index entier) : Adresse
+      res est Adresse
+      
+      // si pas dispo
+      si index> m_TabKey..Occurrence ALORS
+      	// renvoie une adresse vide	
+      	renvoyer res
+      FIN
+      
+      sAccount58 est chaine = m_TabKey[index].publicAddress()
+      
+      res.bInitFromBase58(sAccount58)
+      
+      renvoyer res
+      
+     type : 458752
+   -
+     name : _vInitUtxoFromBlochain
+     procedure_id : 2029088794750578846
+     type_code : 12
+     code : |1+
+      PROCEDURE  virtuelle _vInitUtxoFromBlochain(clDBAcces BaseBitcoinLocale )
+      
+      // vide les utxo avant de les re-remplir
+      m_tabJeton.SupprimeTout()
+      
+      b1UtxoTrouve est un booléen
+      
+      //@Test
+      // on va au max + 5 pour les cas ou l'en aurait sautées...
+      pour i =1 a m_nMaxAddrePubliee+5
+      	//TabAddr.Ajoute( getAdrresseAt(i) )
+      	addrI est Adresse = getAdrresseAt(i) 
+      	si addrI.bEstvide() ALORS
+      		// terminé 
+      		retour
+      	FIN
+      	// essaie	
+      	b1UtxoTrouve = faux
+      	P_onUtxo est une procédure = _onUtxo
+      	clDBAcces.VisiteJetonParAdresse(addrI, P_onUtxo  )
+      	// si on a en a trouvée une
+      	si b1UtxoTrouve _et_ i>m_nMaxAddrePubliee ALORS
+      		// MAJ de m_nMaxAddressePubliee
+      		m_nMaxAddrePubliee = i
+      		
+      	FIN
+      	
+      FIN//POUR
+      
+      Procédure interne _onUtxo( clJeton jeton )
+      	 // ajoute comme jeton connu
+      	_AjouteUtxo( clJeton )
+      	//sinon
+      	//	_AjouteUtxo(_utxo, UTXOSTATUS_INBLOCK )
+      	//fin
+      	b1UtxoTrouve = vrai
+      fin
+      
+     type : 458752
+   -
+     name : _vCréeNouveauPortefeuille
+     procedure_id : 2029089627974363031
+     type_code : 12
+     code : |1+
+      PROCÉDURE virtuelle _vCréeNouveauPortefeuille( iHasard est IsourceDEntropie, nOption entier = 0, sMotDePasse est chaine ="" , pfLogDidactique est une procédure = null)
+      dbgAssertion(nOption = 0)
+      dbgAssertion(sMotDePasse = "","non supporté") 
+      
+      // crée un 100 comptes a partir de valeurs random
+      POUR i=1 a 5
+      	nouveauCompte est  btcAccount dynamique = allouer un btcAccount
+      	nouveauCompte.bcreateNewAccount( iHasard, m_nTypeNet, cléPublique.Compressée,  pfLogDidactique )
+      	m_TabKey.Ajoute(nouveauCompte)
+      FIN
+     type : 458752
+   -
+     name : _vGetComptePourJeton
+     procedure_id : 2029090886400007738
+     type_code : 12
+     code : |1+
+      // renvoie le compte qui peut débloquer un un jeton
+      PROCÉDURE VIRTUELLE _vGetComptePourJeton( j est jeton ) : btcAccount
+      
+      // recherche l'indice de la clé privée a partir de la clé publique
+      nIndiceCléPrivée est entier = _nGetIndiceCléPrivee(j)
+      SI nIndiceCléPrivée=-1 ALORS
+      	comptetVIDE est btcAccount
+      	RENVOYER comptetVIDE // clé invalide
+      FIN
+      
+      // récup dans le tableau
+      renvoyer  m_TabKey[nIndiceCléPrivée]
+      
+     type : 458752
+   -
+     name : bCharge
+     procedure_id : 2029096014695176270
+     type_code : 12
+     group : 2
+     code : |1+
+      procédure virtuelle bCharge(  sNomCompleFic est chaine="" ) : booléen
+      // vider tout
+      _VideTout()
+      
+      s est une chaîne ANSI 
+      // si nom par précisé
+      si sNomCompleFic="" ALORS
+      	sNomCompleFic = _sGetNomFichier()
+      FIN
+      //s = fChargeBuffer(_sGetNomFichier())
+      s = fChargeBuffer( sNomCompleFic )
+      si ErreurDétectée() ALORS
+      	renvoyer faux
+      FIN
+      x est un variant
+      x =JSONVersVariant(s)
+      si ErreurDétectée ALORS
+      	
+      	renvoyer faux
+      FIN
+      
+      
+      // recup des membre a partir du variant
+      si x.version < 1 ou x.version > 100 ALORS
+      	ErreurDéclenche(ERR_BITCOIN_FILE, <§$0000§> + x.version )
+      	renvoyer faux
+      FIN
+      m_sNom 			= x.name  
+      m_nTypeNet 		= EnumérationDepuisValeur( btcnetwork,  x.networktype )
+      m_dateCreation 	= x.creationDate     
+      si x.version >= 2 ALORS
+      	m_techno    = portefeuilleBase.HD_BIP32
+      FIN
+      //m_dateDernierMaj= x.modificationDate 
+      //m_clDernierSolde.SetEnSatoshi( x.ammount)
+      
+      //@Temp
+      si pas x.creationDate..existe ALORS
+      	m_dateCreation   = fDateHeure(_sGetNomFichier(),"",fCréation    )
+      	m_dateDernierMaj = m_dateCreation
+      FIN
+      si x.image..Existe alors
+      	//UUEncode(dSauveImagePNG(m_image,enMémoire))
+      	sBuffer est un buffer = UUDécode(x.image)
+      	m_image = sBuffer
+      sinon
+      	//@calc a partit du nom
+      	h est hash256 
+      	h.calcShaSha((m_sNom))
+      //	m_image = creeImageAvatarRobot(h,64)
+      FIN
+      
+      
+      // + info de cache (dernier solde, ...)
+      _bchargeCache()
+      
+      
+      // clés
+      POUR TOUT account DE x.account
+      	// récup clé
+      	sPrivKey est chaine = account.privateKeyWif
+      	sPubKey  est chaine = account.publicKey
+      	sPubAddr est chaine = account.publicAdrresse
+      	// ajout de la clé
+      	sErr_OUT est chaine
+      	nouveauCompte est  btcAccount dynamique = allouer un btcAccount
+      	si pas nouveauCompte.bcreateFromSerialisedData( sPrivKey, sPubKey, sPubAddr, sErr_OUT ) alors
+      		ErreurDéclenche(ERR_BITCOIN_FILE, <§$0001§> + rc + sErr_OUT)
+      		renvoyer faux
+      	FIN
+      	m_TabKey.Ajoute(nouveauCompte)
+      FIN
+      
+      
+      //OK
+      renvoyer vrai
+      
+      
+     type : 458752
+   -
+     name : bSauve
+     procedure_id : 2029096014695242087
+     type_code : 12
+     group : 2
+     code : |1+
+      procédure virtuelle bSauve(bEcrasementAutorise=FAUX)
+      
+      // erreur si le fichier existe déjà
+      si pas bEcrasementAutorise _et_ fFichierExiste(_sGetNomFichier()) ALORS
+      	ErreurDéclenche(ERR_BITCOIN_FILE, <§$0002§> + rc + _sGetNomFichier())
+      	renvoyer faux
+      FIN
+      
+      // copie vers un variant dont le membres sont sauvé 
+      x est un variant
+      x.name 			   = m_sNom
+      x.networktype	   = m_nTypeNet..Valeur // Vers entier. ex 1 = mainnet
+      x.creationDate     = ""+ m_dateCreation
+      x.image			   = UUEncode(dSauveImagePNG(m_image,enMémoire))
+      
+      
+      // on sauve chaque clé : privé, publiqué, adresse (pour éviter de les recalculer au chargement)
+      x.version = 1
+      POUR i =1 _a_ m_TabKey..Occurrence
+      	//
+      	sPrivKey est chaine =  m_TabKey[i].privateKeyFormaWIF()
+      	sPubKey  est chaine =  BufferVersHexaSansEspace( m_TabKey[i].publickeyformatRawUncompressed())  // BufferVersHexaSansEspace => BigEndian
+      	sPubAddr est chaine =  m_TabKey[i].publicAddress()
+      	x.account[i].privateKeyWif   = sPrivKey
+      	x.account[i].publicKey       = sPubKey 
+      	x.account[i].publicAdrresse  = sPubAddr
+      FIN
+      
+      
+      
+      
+      s est chaine ansi
+      s= VariantVersJSON(x, psdMiseEnForme)
+      //+= ""
+      
+      fSauveBuffer(_sGetNomFichier(), s)
+      SI ErreurDétectée() ALORS
+      	RENVOYER Faux
+      FIN
+      
+      // OK
+      renvoyer vrai
+     type : 458752
+   -
+     name : _nGetIndiceCléPrivee
+     procedure_id : 2029096766314758892
+     type_code : 12
+     code : |1+
+      Procédure _nGetIndiceCléPrivee( j est jeton ) : entier
+      
+      // recherche l'indice de la clé privée a partir de la clé publique
+      nIndiceCléPrivée est entier = -1
+      POUR i = 1 _a_ m_TabKey..Occurrence
+      	SI m_TabKey[i].bPossèdeLaCléPrivéePour( j.addr ) ALORS
+      		// trouvé
+      		Renvoyer  i		
+      	FIN
+      	
+      FIN
+      // pas trouvé
+      dbgAssertion(Faux,"Le portefeuille n'a pas la clé du jeton")
+      renvoyer -1
+      
+     type : 458752
+   -
+     name : _nRecherAddr
+     procedure_id : 2029097496523136318
+     type_code : 12
+     code : |1+
+      // renvoyer l'indice d'une adresse
+      procédure _nRecherAddr( addrRech est Adresse ) : entier
+      
+      POUR i=1 _À_ m_nMaxAddrePubliee+1
+      	addrI est Adresse = GetAdrresseAt(i)
+      	si addrI.estEgalA( addrRech ) ALORS
+      		// trouvé
+      		renvoyer i
+      	FIN
+      FIN
+      //pas trouvé
+      dbgAssertion(faux)
+      renvoyer -1
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1c2890570b89c22c
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+  strings :
+   -
+     text :
+      fr-FR : "version non supportée :"
+      en-GB : "version non supportée :"
+      es-ES : "version non supportée :"
+      ar-SA : "version non supportée :"
+     index : 0
+   -
+     text :
+      fr-FR : valeur invalide
+      en-GB : valeur invalide
+      es-ES : valeur invalide
+      ar-SA : valeur invalide
+     index : 1
+   -
+     text :
+      fr-FR : Le fichier existe déjà.
+      en-GB : Le fichier existe déjà.
+      es-ES : Le fichier existe déjà.
+      ar-SA : Le fichier existe déjà.
+     index : 2
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

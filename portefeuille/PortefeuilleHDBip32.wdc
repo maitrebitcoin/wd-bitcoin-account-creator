@@ -1,0 +1,877 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : PortefeuilleHDBip32
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1c288f8809c29771
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      // portefeuille Hiérachique Détermiste ( BIP 32 )
+      //.sauvegarde et restauration complete via un seul seed de 128 a 512 bits
+      portefeuilleHDBip32 est une Classe <contexte HFSQL léger>
+      	herite de portefeuilleBase
+      	
+      	// buffer a aléatoire utilisé pour générer le portefeuille. uniquement valide en création.
+      	m_bufferAléatoireGénérateur est variableProtégée// un buffer
+      	m_nTailleEnBit est un entier // taille enbits de <m_bufferAléatoireGénérateur> en clair = Taille(sGetBufferAleatoireGenerateur() ) * 8
+      	m_phraseBip39  est variableProtégée // chaine. ex : "neither arrive wish inherit move olympic isolate orchard voice kiwi early head"
+      	// gestion de la hiérarchie déterministe 
+      	m_HDKeys est HDWallet
+      	m_bAvecMotDePasse est un booléen
+      	
+      	// cache des compte crée par la hierachie
+      	m_CacheCompte est un tableau associatif de btcAccount
+      	
+      	m_FIC_CacheClé 		est une source de données 
+      	m_bFIC_CacheCléDécrit est un booléen
+      	
+      	m_bModeTestAutoRapide est un booléen // si vrai on ne crée/renvoie que la racine pour optim
+      	
+      FIN
+      
+      typeDérivation est une énumération
+      	BIP32        = 0
+      	BIP44  		 = 1	// legacy P2KH (ex electrum )
+      	BIP49_Segwit = 2
+      	BIP84_Bech32 = 3    // +BIP 173 pour encodage bench32
+      fin
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 2029029446572545905
+     type_code : 27
+     code : |1-
+      PROCEDURE Constructeur()
+      	Constructeur m_HDKeys(null)
+      m_techno = portefeuilleBase.HD_BIP32
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 2029029446572611441
+     type_code : 28
+     code : |1-
+      PROCEDURE Destructeur()
+      
+      //pour TA
+      HFerme("*")
+     type : 655360
+   -
+     name : _getCompteFromChemin
+     procedure_id : 2029144006078405110
+     type_code : 12
+     code : |1+
+      // renvoie un compte selon un chemin hiérarchique
+      procédure _getCompteFromChemin( sCheminHDW est chaine, bAvecCléPrivée booléen) : btcAccount
+      
+      // on regarde d'abord si on l'a en cache
+      si :m_CacheCompte[sCheminHDW]..Existe ALORS
+      	renvoyer m_CacheCompte[sCheminHDW]
+      FIN
+      
+      //  crée un objet avec les clés initialisées
+      compte est  btcAccount 
+      compte.m_nNetwork  = m_nTypeNet
+      
+      // on regarde si on dans un fichier HF de cache (clés publiques uniquement)
+      si pas bAvecCléPrivée
+      _InitDescriptionCache()
+      	HLitRecherche(m_FIC_CacheClé, "CHEMIN", sCheminHDW )
+      	si hTrouve() ALORS
+      		compte.m_publicKey.initDepuisBufferNonCompressé(  (m_FIC_CacheClé.CléPublique)  )
+      		//commenté pour la sécurité
+      		//compte.m_privateKey.affecteAvecBuffer(            (m_FIC_CacheClé.CléPrivéé  )  ) 
+      	sinon
+      		compte.m_publicKey   = m_HDKeys.getPublicKeyFromPath( sCheminHDW )
+      		compte.m_privateKey  = m_HDKeys.getPrivateKeyFromPath(sCheminHDW )
+      		// Met en cache HF
+      		HRaz( m_FIC_CacheClé )
+      		m_FIC_CacheClé.CHEMIN 	   = sCheminHDW
+      		m_FIC_CacheClé.CléPublique = compte.m_publicKey.versbufferNonCompressé()
+      		//commenté pour la sécurité
+      		//m_FIC_CacheClé.CléPrivéé   = compte.m_privateKey.versbuffer()
+      		HAjoute( m_FIC_CacheClé )
+      	fin
+      fin
+      
+      // on met dans le cache
+      m_CacheCompte[sCheminHDW] = compte
+      
+      renvoyer compte
+     type : 458752
+   -
+     name : bSetBufferGenerateur
+     procedure_id : 2138460365525346449
+     type_code : 12
+     code : |1+
+      // Init a  partir d'un buffer aléatoire
+      procédure bSetBufferGenerateur( bufferAléatoire buffer, sERR_OUT chaine )
+      
+      // on conserve le buffer pour pouvoir afficher la phrase de sauvegarde
+      :m_bufferAléatoireGénérateur.SetValeurSecret( bufferAléatoire )
+      :m_nTailleEnBit = Taille(bufferAléatoire ) * 8
+      
+      // conversion en phrase au format BIP39
+      phraseEnClair_utf8 est chaine ansi = Bip39.bufferVersPhrase( bufferAléatoire, sERR_OUT)
+      si phraseEnClair_utf8="" ALORS
+      	renvoyer faux
+      FIN
+      m_phraseBip39.SetValeurSecret(phraseEnClair_utf8)
+      VariableProtégée::DetruitSecret( phraseEnClair_utf8 )
+      // OK
+      renvoyer vrai
+     type : 458752
+   -
+     name : _vCréeNouveauPortefeuille
+     procedure_id : 2029089928622143360
+     type_code : 12
+     code : |1+
+      // <nOption> : paramètre la taille de la graine : 0 => 128 bits, 1 => 256 bits, 2 => 512 bits
+      // <pfLogDidactique> : pfLogDidactique( etape est EtappeCreationCompte, résultat est chaine )
+      PROCÉDURE virtuelle _vCréeNouveauPortefeuille(  iHasard est IsourceDEntropie , nOption entier = 0,  sMotDePasse est chaine ="", pfLogDidactique est une procédure = null )
+      
+      // passphrase dans le BIP39
+      passphrase est chaine = sMotDePasse
+      
+      // calcul de la taille de la graine
+      // graine a 128 bits = 12 mots si BIP 39
+      nTailleSeedBits est un entier = 128
+      si nOption=1 ALORS
+      	nTailleSeedBits = 256 
+      FIN
+      SI nOption=2 ALORS
+      	nTailleSeedBits = 512
+      FIN
+      
+      //================================================================================
+      // tirage d'une graine <sRandomSeed> au hasard.
+      //
+      //                  /!\   ATTENTION      /!\
+      //
+      //  si ce nombre n'est pas assez aléatoire = n'a pas assez d'entropie,
+      //  la SÉCURITÉ du compte est compromise 
+      nTailleBuf est un entier =  nTailleSeedBits / 8 
+      bufferAléatoire est buffer 
+      SI iHasard=Null ALORS
+      	bufferAléatoire = HasardCryptoBuffer( nTailleBuf )
+      SINON
+      	bufferAléatoire = iHasard.sGetBufferAléaloire( nTailleBuf  )
+      fin
+      //================================================================================
+      
+      dbgAssertion( taille(bufferAléatoire) = nTailleBuf )
+      // on donne le buffer pour calculer tout le reste (phrase, clé privées et publiques)
+      sERR_OUT est chaîne 
+      si pas bSetBufferGenerateur( bufferAléatoire, sERR_OUT ) ALORS
+      	dbgAssertion(faux, sERR_OUT)
+      	ErreurDéclenche(ERR_BITCOIN_LIB,sERR_OUT )
+      	retour
+      FIN
+      si pfLogDidactique<>Null ALORS
+      	// NON sécurisé ici :
+      	pfLogDidactique( etape_BufferAléatoire , BufferVersHexaSansEspace( bufferAléatoire  ), nTailleBuf*8 )
+      FIN
+      // on crée une phrase  qui représente ce buffer aléatoire
+      // ex : "crawl benefit setup advance drop deputy grace ticket also casino joy clown soul ticket cash because squirrel robust coil kind laundry good hedgehog day"
+      sErreur est chaine
+      sPhraseBip39 est chaine ansi = Bip39.bufferVersPhrase(bufferAléatoire,sErreur)
+      dbgAssertion(sPhraseBip39<>"", sErreur)
+      SI pfLogDidactique<>Null ALORS
+      	pfLogDidactique( etape_PhraseBip39 , sPhraseBip39 )
+      FIN
+      VariableProtégée::DetruitSecret( bufferAléatoire )
+      
+      // on en dérive une graine pour le portefeuille + mot de passe si fourni
+      sbufferGraine est un buffer = DeriveParaphrase((sPhraseBip39), passphrase )
+      SI pfLogDidactique<>Null ALORS
+      	Bip39_Seed est une chaîne = Minuscule( BufferVersHexaSansEspace(sbufferGraine) )
+      	pfLogDidactique( etape_GraineBip32 , Bip39_Seed )
+      FIN
+      // on note si un mot a passe a ét utilisé
+      :m_bAvecMotDePasse = passphrase<>""
+      
+      // Init clés déterministes racines
+      m_HDKeys.initFromSeed( sbufferGraine )	
+      si pfLogDidactique<>null ALORS
+      	// log partie privée
+      	soit (root,extra)       = m_HDKeys.getPrivateKeyPairRoot()
+      	tabRoot est un tableau d'entier sur 4 sans signe //= [0]	
+      	sValLog est chaine =   "brut: "   + root.VersChaineHexa() + RC + 
+      						   "serial: " +	m_HDKeys.getPrivateSerialised58( :m_nTypeNet,  tabRoot) + rc  +
+      						   "extra: "  + BufferVersHexaSansEspace(extra) 
+      	pfLogDidactique( etape_CléPrivééRacineBip32 , sValLog )
+      	// log partie publique
+      	soit (rootpub) = m_HDKeys.getPublicKeyPairRoot()
+      	sValLog 		 =   "x: "    +rootpub.x.VersChaineHexa() + RC +
+      					     "y: "    +rootpub.y.VersChaineHexa() 
+      	pfLogDidactique( etape_CléPubliqueRacineBip32 , sValLog  )
+      FIN
+      
+     type : 458752
+   -
+     name : sGetBufferAleatoireGenerateur_OBSOLETE
+     procedure_id : 2082402270867055645
+     type_code : 12
+     code : |1+
+      // buffer aléatoire qui a généré le compte. 
+      // uniquement valide si on a appelé _vCréeNouveauPortefeuille()
+      procédure sGetBufferAleatoireGenerateur_OBSOLETE() : buffer
+      
+      renvoyer ""
+     type : 458752
+   -
+     name : getPhraseDeSauvegardeBIP39
+     procedure_id : 2082403177105234716
+     type_code : 12
+     code : |1+
+      // revoie la liste de mot qui permet de sauver tout le compte.
+      // au format BIP39
+      // ex : "wasp stove trap sell naive version brass reduce police shy twenty basket city clutch curve donate manage gossip memory exile cruise topple reject picture"
+      // renvoie (phare, erreur)
+      procédure getPhraseDeSauvegardeBIP39() : VariableProtégée
+      
+      renvoyer :m_phraseBip39
+      
+     type : 458752
+   -
+     name : nGetNbMotPhraseDeSauvegardeBIP39
+     procedure_id : 2127826957286174451
+     type_code : 12
+     code : |1+
+      // renvoie le NB de mots de la phrase de sauvegarde
+      procédure nGetNbMotPhraseDeSauvegardeBIP39() : entier
+      
+      dbgAssertion(m_nTailleEnBit>=128)
+      nTailleEnBit est un entier = :m_nTailleEnBit// Taille(sGetBufferAleatoireGenerateur() ) * 8
+      selon nTailleEnBit
+      	cas 128: renvoyer 12
+      	cas 256: renvoyer 24
+      	cas 512: renvoyer 48
+      	AUTRE CAS
+      		dbgAssertion(faux)
+      		renvoyer 24
+      FIN
+     type : 458752
+   -
+     name : InitDepuisGraine
+     procedure_id : 2029869757223202779
+     type_code : 12
+     code : |1+
+      // Init a partir d'une graine de 128 a 512 bits (pour restauration de portefeuille)
+      Procédure InitDepuisGraine( graine est un buffer, reseau est BtcNetwork )
+      
+      m_nTypeNet = reseau
+      m_HDKeys.initFromSeed( graine )	
+     type : 458752
+   -
+     name : InitDepuisPhraseBip39
+     procedure_id : 2085012000062100827
+     type_code : 12
+     code : |1+
+      // Init a partir d'une phrase de 12 à 48 mots au format BIP39.
+      // Ex : "crawl benefit setup advance drop deputy grace ticket also casino joy clown soul ticket cash because squirrel robust coil kind laundry good hedgehog day"
+      // renvoie (OK, erreur)
+      procédure InitDepuisPhraseBip39( _ListeMots variableprotégée,  sMotDePasse chaine, typeDeReseau est BtcNetwork) : (booléen, chaine)
+      
+      sListeMotsEnClair est une chaîne ansi // UTF8
+      _ListeMots.GetValeurSecret_ADetruireRapidement(sListeMotsEnClair)
+      
+      // on transforme la phrase en buffer
+      //=le buffer aléatoire qui avait servi a tout générer
+      sErreur est chaine
+      bufferAléatoireGen est un Buffer = Bip39.phraseVersBuffer(sListeMotsEnClair, sErreur)
+      SI bufferAléatoireGen ="" ALORS
+      	// Erreur, phrase invalide
+      	REnvoyer (faux, sErreur)
+      FIN
+      
+      // on ré-encode la phrase
+      sPhraseBip39 est Buffer = Bip39.bufferVersPhrase(bufferAléatoireGen,sErreur)
+      SI sPhraseBip39="" ALORS
+      	// Erreur, pb interne
+      	dbgAssertion(faux, sErreur)
+      	RENVOYER (Faux, sErreur)
+      FIN
+      // on doit trouver pareil a la casse/espaces prêt
+      dbgAssertion( sPhraseBip39 = SansEspace(Minuscule(sListeMotsEnClair)))
+      variableprotégée::DetruitSecret( sListeMotsEnClair )
+      
+      // on en dérive une graine pour le portefeuille
+      passphrase est chaîne = sMotDePasse
+      sbufferGraine est un Buffer = DeriveParaphrase(sPhraseBip39, passphrase )
+      
+      // Init portefeuille
+      InitDepuisGraine(sbufferGraine, typeDeReseau )
+      // pour pouvoir afficher la phrase de sauvegarde
+      sERR_OUT est chaine
+      bSetBufferGenerateur(  bufferAléatoireGen, sERR_OUT )
+      si sERR_OUT<>"" ALORS
+      	renvoyer  (faux, sERR_OUT)
+      FIN
+      VariableProtégée::DetruitSecret( bufferAléatoireGen )
+      
+      // success
+      renvoyer (vrai,"")
+     type : 458752
+   -
+     name : bCharge
+     procedure_id : 2029096066234926409
+     type_code : 12
+     group : 2
+     code : |1+
+      procédure virtuelle bCharge(  sNomCompleFic est chaine="" ) : booléen
+      // vider tout
+      _VideTout()
+      
+      s est une chaîne ANSI 
+      // si nom par précisé
+      si sNomCompleFic="" ALORS
+      	sNomCompleFic = _sGetNomFichier()
+      FIN
+      //s = fChargeBuffer(_sGetNomFichier())
+      s = fChargeBuffer( sNomCompleFic )
+      si ErreurDétectée() ALORS
+      	renvoyer faux
+      FIN
+      x est un variant
+      x =JSONVersVariant(s)
+      si ErreurDétectée ALORS
+      	
+      	renvoyer faux
+      FIN
+      
+      // recup des membre a partir du variant
+      si x.version < 1 ou x.version > 100 ALORS
+      	ErreurDéclenche(ERR_BITCOIN_FILE, <§$0000§> + x.version )
+      	renvoyer faux
+      FIN
+      m_sNom 			= x.name  
+      m_nTypeNet 		= EnumérationDepuisValeur( btcnetwork,  x.networktype )
+      m_dateCreation 	= x.creationDate     
+      si x.version >= 2 ALORS
+      	m_techno    = portefeuilleBase.HD_BIP32
+      FIN
+      //m_dateDernierMaj= x.modificationDate 
+      //m_clDernierSolde.SetEnSatoshi( x.ammount)
+      
+      //@Temp
+      si pas x.creationDate..existe ALORS
+      	m_dateCreation   = fDateHeure(_sGetNomFichier(),"",fCréation    )
+      	m_dateDernierMaj = m_dateCreation
+      FIN
+      si x.image..Existe alors
+      	//UUEncode(dSauveImagePNG(m_image,enMémoire))
+      	sBuffer est un buffer = UUDécode(x.image)
+      	m_image = sBuffer
+      sinon
+      	//@calc a partit du nom
+      	h est hash256 
+      	h.calcShaSha((m_sNom))
+      	m_image = creeImageAvatarRobot(h,64)
+      FIN
+      
+      
+      // + info de cache (dernier solde, ...)
+      _bchargeCache()
+      
+      
+      // Seed uniqment
+      seed est un buffer = HexaVersBuffer( x.seed )
+      m_HDKeys.initFromSeed(seed)
+      	
+      // Init cache
+      //_InitDescriptionCache()
+      	
+      //OK
+      renvoyer vrai
+     type : 458752
+   -
+     name : bSauve
+     procedure_id : 2029108547665698697
+     type_code : 12
+     code : |1+
+      ///@A revoir, non sécurisé
+      PROCÉDURE VIRTUELLE bSauve(bEcrasementAutorise=Faux)
+      
+      // erreur si le fichier existe déjà
+      SI PAS bEcrasementAutorise _ET_ fFichierExiste(_sGetNomFichier()) ALORS
+      	ErreurDéclenche(ERR_BITCOIN_FILE, "Le fichier existe déjà." + RC + _sGetNomFichier())
+      	RENVOYER Faux
+      FIN
+      
+      // copie vers un variant dont le membres sont sauvé 
+      x est un Variant
+      x.name 			   = m_sNom
+      x.networktype	   = m_nTypeNet..Valeur // Vers entier. ex 1 = mainnet
+      x.creationDate     = ""+ m_dateCreation
+      x.image			   = UUEncode(dSauveImagePNG(m_image,enMémoire))
+      
+      // récup du seed en clair. UNSAFE
+      seedenclair est Buffer
+      m_HDKeys.m_graine.GetValeurSecret_ADetruireRapidement(seedenclair)
+      
+      // on sauve le seed uniquement
+      x.version = 2
+      x.seed 	= BufferVersHexaSansEspace( seedenclair )
+      variableProtégée::DetruitSecret(seedenclair)
+      
+      s est chaîne ANSI = VariantVersJSON(x, psdMiseEnForme) 
+      
+      fSauveBuffer(_sGetNomFichier(), s)
+      SI ErreurDétectée() ALORS
+      	RENVOYER Faux
+      FIN
+      
+      // OK
+      RENVOYER Vrai
+     type : 458752
+   -
+     name : _visiteCheminUtilisé
+     procedure_id : 2029149533836557459
+     type_code : 12
+     code : |1+
+      // appel visiteur() sur touts les chemins qui on pu être utilisé pour géréner des clés
+      // visiteur() doit renvoyer FAUX pour stopper la visite
+      procédure _visiteCheminUtilisé( visiteur est procédure )
+      
+      // clé master 
+      si pas visiteur("m") alors retour
+      si m_bModeTestAutoRapide alors retour
+      // clé racine du compte 0 ?
+      SI PAS visiteur("m/0")  ALORS RETOUR
+      SI PAS visiteur("m/0H") ALORS RETOUR
+      
+      POUR i = 0 a :m_nMaxAddrePubliee+1
+      	// chemin pour clé <i> externe
+      	sCheminI est chaine = "m/0/0/" + i
+      	si pas visiteur(sCheminI) ALORS RETOUR
+      	// chemin pour clé <i> interne
+      	sCheminI  = "m/0/1/" + i
+      	si pas visiteur(sCheminI) ALORS RETOUR
+      FIN
+      
+      
+     type : 458752
+   -
+     name : _sRechercheCheminPourJeton
+     procedure_id : 2029108216905757393
+     type_code : 12
+     code : |1+
+      // renvoie le chemin ou l'on peut touver les clés associées a un jeton
+      procédure _sRechercheCheminPourJeton(  j est jeton ) : chaine
+      
+      	refSurJ est un Jeton dynamique <- j
+      	Procédure interne _bCheminEstPourJeton( sChemin est chaine )
+       		addr est Adresse = refSurJ.addr
+      		compte est btcAccount <-  _getCompteFromChemin( sChemin, vrai )
+      		si compte.bPossèdeLaCléPrivéePour( addr ) ALORS
+      			// ce chemin mene a au compte parent de J
+      			renvoyer vrai
+      		FIN
+      		// ce chemin ne mène pas a la clé
+      		renvoyer faux
+      	fin
+      
+      	sCheminTouve est chaine
+      	Procédure interne _bVisiteur( sCheminI est chaine ) : booléen
+      		// si c'est le chemin du parent du jeton 
+      		SI _bCheminEstPourJeton( sCheminI) ALORS
+      			// trouvé
+      			sCheminTouve = sCheminI
+      			// fin de parcourt
+      			renvoyer faux
+      		FIN
+      		// continuer la recherche
+      		renvoyer vrai
+      	fin
+      
+      	// appel de <_bVisiteur> sur toutes les clés utilisées
+      	_visiteCheminUtilisé( _bVisiteur )
+      	si sCheminTouve<>"" ALORS
+      		// trouvé
+      		renvoyer sCheminTouve
+      	FIN
+      //
+      //// clé master ?
+      //si _bCheminEstPourJeton("m") ALORS
+      //	renvoyer "m"
+      //FIN
+      //
+      //// clé racine du compte 0 ?
+      //SI _bCheminEstPourJeton("m/0") ALORS
+      //	RENVOYER "m"
+      //FIN
+      //// clé racine du compte 0 durci ?
+      //SI _bCheminEstPourJeton("m/0H") ALORS
+      //	RENVOYER "m"
+      //FIN
+      //
+      //POUR i = 1 a m_nMaxAddrePubliee
+      //	// chemin pour clé <i> externe
+      //	sCheminI est chaine = "m/0/0/" + i
+      //	// si c'est le chemin du parent du jeton 
+      //	si _bCheminEstPourJeton( sCheminI) ALORS
+      //		// trouvé
+      //		renvoyer sCheminI
+      //	FIN
+      //	// chemin pour clé <i> interne
+      //	sCheminI  = "m/0/1/" + i
+      //	// si c'est le chemin du parent du jeton 
+      //	SI _bCheminEstPourJeton( sCheminI) ALORS
+      //		// trouvé
+      //		RENVOYER sCheminI
+      //	FIN
+      //	
+      //FIN
+      
+      // pas trouvé
+      renvoyer ""
+     type : 458752
+   -
+     name : _vGetComptePourJeton
+     procedure_id : 2029098669049480798
+     type_code : 12
+     code : |1+
+      // renvoie la clé publique pour un jeton
+      PROCÉDURE VIRTUELLE _vGetComptePourJeton( j est jeton ) : btcAccount
+      
+      // on recherche un chemin dans la hierachie pour le jeton
+      sChemin est chaine = _sRechercheCheminPourJeton( j )
+      si sChemin="" ALORS
+      	// pas trouvé
+      	compteVIDE est btcAccount
+      	renvoyer  compteVIDE
+      FIN
+      
+      //  récup du compte selon le chemin
+      renvoyer _getCompteFromChemin( sChemin, vrai )
+     type : 458752
+   -
+     name : getAdressePourReceptionDeFond
+     procedure_id : 2029098669049415184
+     type_code : 12
+     code : |1+
+      // renvoyer une adresse pour recevoir des bitcoins
+      PROCÉDURE VIRTUELLE getAdressePourReceptionDeFond() : Adresse
+      
+      résultat est Adresse 
+      //@A voir
+      shemin est une chaîne = "m/0/0/" + m_nMaxAddrePubliee
+      si m_bModeTestAutoRapide ALORS
+      	shemin = "m"
+      FIN
+      cléPub est cléPublique = m_HDKeys.getPublicKeyFromPath(shemin)
+      
+      //  conversion au format 160 bits compressé
+      typeAdrPub est cléPublique::TypeAddresse = cléPublique.Compressée
+      bufRaw est un buffer= cléPub.versAdresse160Bits( typeAdrPub )
+      résultat.bInitFromRaw160Bit( bufRaw, m_nTypeNet, typeAdrPub  )
+      renvoyer résultat
+     type : 458752
+   -
+     name : getCheminDérivation
+     procedure_id : 2132539021726695989
+     type_code : 12
+     code : |1-
+      procédure getCheminDérivation(numAdr Entier, typeAddr est typeDérivation) : (chaine, cléPublique::TypeAddresse ) 
+      
+      // pour BIP 44/49 : coin_type'  dans "m / purpose' / coin_type' / account' / change / address_index"
+      nTypeCoin est un entier
+      SELON m_nTypeNet 
+      	CAS BtcNet_Main
+      		nTypeCoin = 0
+      	CAS BtcNet_Test
+      		nTypeCoin = 1
+      	CAS BtcNet_Simu
+      		nTypeCoin = 1
+      	CAS BtcNet_TestAuto
+      		nTypeCoin = 1
+      FIN
+      
+      // calcul du chemin de dérivation selon le type d'adresse que l'on veut générer
+      sCheminDérivation est une chaîne 
+      option est cléPublique::TypeAddresse // = cléPublique.Compressée
+      SELON typeAddr
+      	CAS BIP32
+      		sCheminDérivation = "m/0/" + (numAdr-1)
+      		option=cléPublique.Compressée
+      	CAS BIP44
+      		sCheminDérivation = ChaîneConstruit( "m/44'/%1'/0'/0/%2",  nTypeCoin, (numAdr-1))
+      		option=cléPublique.Compressée
+      	CAS BIP49_Segwit
+      		sCheminDérivation = ChaîneConstruit( "m/49'/%1'/0'/0/%2",  nTypeCoin, (numAdr-1))
+      		option=cléPublique.ScriptHash
+      	CAS BIP84_Bech32
+      		sCheminDérivation = ChaîneConstruit( "m/84'/%1'/0'/0/%2",  nTypeCoin, (numAdr-1))
+      		option=cléPublique.SewgitNatif		
+      FIN
+      
+      renvoyer (sCheminDérivation, option)
+     type : 458752
+   -
+     name : getAdressePubliqueNumero
+     procedure_id : 2080593621273078348
+     type_code : 12
+     code : |1+
+      // renvoyer une adresse pour recevoir des bitcoins
+      // <numAdr> : n° d'ordre de l'adresse publique (ordre d'utilisation)
+      // <pfLogDidactique> : pfLogDidactique( etape est EtappeCreationCompte, résultat est chaine )
+      PROCÉDURE VIRTUELLE getAdressePubliqueNumero(numAdr entier, typeAddr est typeDérivation,  pfLogDidactique est une procédure=null ) : Adresse
+      dbgAssertion(numAdr>=1)
+      
+      // calcul du chemin de dérivation selon le type d'adresse que l'on veut générer
+      résultat est Adresse 
+      sCheminDérivation est une chaîne 
+      option est cléPublique::TypeAddresse // = cléPublique.Compressée
+      (sCheminDérivation,option) = getCheminDérivation(numAdr, typeAddr)
+      
+      // calcul de la clé publique associée a ce chemin de dérivation
+      cléPub est cléPublique <- m_HDKeys.getPublicKeyFromPath(sCheminDérivation)
+      si pfLogDidactique<>Null ALORS
+      	sValLog est chaine = "x: "    +cléPub.x.VersChaineHexa() + RC +
+      					 	 "y: "    +cléPub.y.VersChaineHexa() 	
+      	pfLogDidactique( etape_CléPubliqueDérivééBip32   , sValLog, sCheminDérivation  )
+      FIN
+      
+      //  conversion au format buffer 160 bits 
+      // ex : "025534701c4ac34ca81adee4deb42b997dac8c27351148b53e82dfc50c969695f7"
+      bufRaw est un Buffer = cléPub.versAdresse160Bits(  option )
+      SI pfLogDidactique<>Null ALORS
+      	pfLogDidactique( etape_CléAdressePubliqueBrute  , BufferVersHexaSansEspace( bufRaw ))
+      	FIN
+      
+      // init de l'adresse a partir du buffer brut
+      résultat.bInitFromRaw160Bit( bufRaw, m_nTypeNet, option  )
+      SI pfLogDidactique<>Null ALORS
+      	// ex : "1A4bP1u77jLPvu6KgcCsg3VeKxVujBfG79" ou "bc1qfm09gt6jqtu5wkl2a43na6l5mzkq327p8n6y6e"
+      	si option = cléPublique.SewgitNatif ALORS
+      		// ex :  "bc1qfm09gt6jqtu5wkl2a43na6l5mzkq327p8n6y6e"
+      		pfLogDidactique( etape_CléAdressePubliqueBech32   , résultat.versTexteIhm() )
+      	sinon
+      		// ex : "1A4bP1u77jLPvu6KgcCsg3VeKxVujBfG79"
+      		pfLogDidactique( etape_CléAdressePubliqueLegacy   , résultat.versTexteIhm() )
+      	FIN
+      FIN
+      
+      RENVOYER résultat
+     type : 458752
+   -
+     name : getAdressePubliquePrincipale
+     procedure_id : 2130293144559253789
+     type_code : 12
+     code : |1+
+      procédure getAdressePubliquePrincipale(typeAddr est typeDérivation ) : Adresse
+      
+      renvoyer getAdressePubliqueNumero(1,typeAddr)
+     type : 458752
+   -
+     name : getCheminDérivationPrincipal
+     procedure_id : 2149590686853372055
+     type_code : 12
+     code : |1-
+      procédure getCheminDérivationPrincipal(typeAddr est typeDérivation) : chaine
+      
+      // calcul du chemin de dérivation selon le type d'adresse que l'on veut générer
+      sCheminDérivation est une chaîne 
+      option est cléPublique::TypeAddresse // = cléPublique.Compressée
+      (sCheminDérivation,option) = getCheminDérivation(1, typeAddr)
+      
+      renvoyer sCheminDérivation
+     type : 458752
+   -
+     name : _vInitUtxoFromBlochain
+     procedure_id : 2029098669049349570
+     type_code : 12
+     code : |1+
+      PROCÉDURE VIRTUELLE  _vInitUtxoFromBlochain(clDBAcces BaseBitcoinLocale)
+      
+      
+      
+      // vide les utxo avant de les re-remplir
+      m_tabJeton.SupprimeTout()
+      	
+      	// callbac appelé pour chaque utxo trouvé par  clDBAcces.RechercheTransactionParAddr()
+      	PROCÉDURE INTERNE _onUtxo( clJeton jeton )
+      		// ajoute comme jeton connu
+      		_AjouteUtxo( clJeton )
+      	FIN
+      
+      	refSurclDBAcces est BaseBitcoinLocale  <- clDBAcces
+      	PROCÉDURE INTERNE _bVisiteur( sCheminI est chaine ) : booléen
+      		
+      		// récup du compte pour ce chemin
+      		compte  est btcAccount = :_getCompteFromChemin(sCheminI, faux)
+      		clAdresse est Adresse    = compte.getBtcAddr()
+      	
+      		// demande a la BDD si on a une entrée pour ce compte
+      		// => appel de _onUtxo() sur chaque entrée
+      		P_onUtxo est une procédure = _onUtxo
+      		refSurclDBAcces.VisiteJetonParAdresse( clAdresse, P_onUtxo  )
+      		
+      		// continuer la visite
+      		RENVOYER Vrai
+      	FIN
+      
+      // appel de <_bVisiteur> sur toutes les clés utilisées
+      _visiteCheminUtilisé( _bVisiteur )
+     type : 458752
+   -
+     name : _InitDescriptionCache
+     procedure_id : 2029453837735709456
+     type_code : 12
+     code : |1+
+      procédure _InitDescriptionCache()
+      
+      si m_bFIC_CacheCléDécrit ALORS
+      	retour
+      FIN
+      m_bFIC_CacheCléDécrit = vrai
+      
+      FichierCache est une Description de Fichier
+      UneRubrique est une Description de Rubrique
+      CLIENT est une Source de Données = "CLIENT"
+      
+      // Description du fichier de données "CACHECLE"
+      FichierCache..Nom = "FIC_CacheClé"
+      FichierCache..Type = hFichierNormal
+      FichierCache..CryptageFic = hCryptageNon // hCryptageAES128
+      
+      // Description de la rubrique "CHEMIN"
+      UneRubrique..Nom     = "CHEMIN"
+      UneRubrique..Type    = hRubTexte
+      UneRubrique..Taille  = 32
+      UneRubrique..TypeClé = hCléUnique
+      HDécritRubrique(FichierCache, UneRubrique)
+      
+      // Description de la rubrique "ClePublique"
+      UneRubrique..Nom     = "ClePublique"
+      UneRubrique..Type    = hRubBinaire
+      UneRubrique..Taille  = 1+32+32 // 4 + X / Y
+      UneRubrique..TypeClé = hNonClé
+      HDécritRubrique(FichierCache, UneRubrique)
+      // Description de la rubrique "ClePrivéee"
+      UneRubrique..Nom     = "CléPrivéé"
+      UneRubrique..Type    = hRubBinaire
+      UneRubrique..Taille  = 32
+      UneRubrique..TypeClé = hNonClé
+      HDécritRubrique(FichierCache, UneRubrique)
+      
+      // Valide la description du fichier de données 
+      HDécritFichier(FichierCache)
+      
+      // déclaration de la source de données
+      m_FIC_CacheClé = {"FIC_CacheClé",indFichier}
+      //FIC_CacheClé est une source de données = {"FIC_CacheClé",indFichier}
+      // création du rep et du fichier si pas encore créé
+      sRepCache est chaine =  completeRep( fExtraitChemin( _sGetNomFichier(),fDisque+fFichier+fRépertoire ) + ".cache" )
+      fRepCréé(sRepCache)
+      HChangeRep( m_FIC_CacheClé,  sRepCache )
+      HCréationSiInexistant(m_FIC_CacheClé)
+      
+      
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1c288f6709bf19a6
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+  strings :
+   -
+     text :
+      fr-FR : "version non supportée :"
+      en-GB : "version non supportée :"
+      es-ES : "version non supportée :"
+      ar-SA : "version non supportée :"
+     index : 0
+   -
+     text :
+      fr-FR : valeur invalide
+      en-GB : valeur invalide
+      es-ES : valeur invalide
+      ar-SA : valeur invalide
+     index : 1
+   -
+     text :
+      fr-FR : Le fichier existe déjà.
+      en-GB : Le fichier existe déjà.
+      es-ES : Le fichier existe déjà.
+      ar-SA : Le fichier existe déjà.
+     index : 2
+   -
+     text :
+      fr-FR : buffer de %1 bits aléatoires
+      en-GB : "buffer de %1 bits aléatoires : %2"
+      es-ES : "buffer de %1 bits aléatoires : %2"
+      ar-SA : "buffer de %1 bits aléatoires : %2"
+     index : 3
+   -
+     text :
+      fr-FR : "phrase au format bip 39 par\r\ndécoupe de <buffer> en parties de 11 bits + crc"
+      en-GB : "phrase au format bip 39 par\r\ndécoupe de <buffer> en parties de 11 bits + crc"
+      es-ES : "phrase au format bip 39 par\r\ndécoupe de <buffer> en parties de 11 bits + crc"
+      ar-SA : "phrase au format bip 39 par\r\ndécoupe de <buffer> en parties de 11 bits + crc"
+     index : 4
+   -
+     text :
+      fr-FR : graine dérivée de <phrase> par
+      en-GB : graine dérivée de <phrase> par
+      es-ES : graine dérivée de <phrase> par
+      ar-SA : graine dérivée de <phrase> par
+     index : 5
+   -
+     text :
+      fr-FR : "PBKDF2(HA_HMAC_SHA_512,<phrase>,2048,64,'mnemonic'+<pass>)"
+      en-GB : "PBKDF2(HA_HMAC_SHA_512,<phrase>,2048,64,'mnemonic'+<pass>)"
+      es-ES : "PBKDF2(HA_HMAC_SHA_512,<phrase>,2048,64,'mnemonic'+<pass>)"
+      ar-SA : "PBKDF2(HA_HMAC_SHA_512,<phrase>,2048,64,'mnemonic'+<pass>)"
+     index : 6
+   -
+     text :
+      fr-FR : "clé privée racine + extra dérivée de <graine> par "
+      en-GB : "clé privée racine + extra dérivée de <graine> par "
+      es-ES : "clé privée racine + extra dérivée de <graine> par "
+      ar-SA : "clé privée racine + extra dérivée de <graine> par "
+     index : 7
+   -
+     text :
+      fr-FR : clé publique racine + extra dérivé de <clé privée> par
+      en-GB : +clé publique racine + extra dérivé de <clé privée> par
+      es-ES : +clé publique racine + extra dérivé de <clé privée> par
+      ar-SA : +clé publique racine + extra dérivé de <clé privée> par
+     index : 8
+   -
+     text :
+      fr-FR : " HashChaîne( HA_HMAC_SHA_512,<graine>, 'Bitcoin seed' )"
+      en-GB : " HashChaîne( HA_HMAC_SHA_512,<graine>, 'Bitcoin seed' )"
+      es-ES : " HashChaîne( HA_HMAC_SHA_512,<graine>, 'Bitcoin seed' )"
+      ar-SA : " HashChaîne( HA_HMAC_SHA_512,<graine>, 'Bitcoin seed' )"
+     index : 9
+   -
+     text :
+      fr-FR : <cl
+      en-GB : <cl
+      es-ES : <cl
+      ar-SA : <cl
+     index : 10
+   -
+     text :
+      fr-FR : ECDSA_MultipliePointGen(<clé orivée>)
+      en-GB : ECDSA_MultipliePointGen(<clé orivée>)
+      es-ES : ECDSA_MultipliePointGen(<clé orivée>)
+      ar-SA : ECDSA_MultipliePointGen(<clé orivée>)
+     index : 11
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

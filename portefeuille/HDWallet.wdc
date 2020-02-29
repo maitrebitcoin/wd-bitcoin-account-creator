@@ -1,0 +1,536 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : HDWallet
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1c236fe10b250588
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      // gestion d'un portefeuille de comptés générés selon le BIP 32 : Hierarchial Deterministic Wallet
+      HDWallet est une Classe
+      	// graine de 128 a 512 bit pour générer masterNode (seed dans le BIP32)
+      	// obtenue en général par  DeriveParaphrase( <phrase Bip39>, <mot de passe> ) => HMAC-SHA512 => 512 bits 
+      	m_graine est une VariableProtégée   // = buffer de 16 a 64 octets
+      // -- cache ---
+      	// 512 bits pour générer les clés et leurs extension (masterNode  dans le BIP32 )
+      	// obtenu par HashChaîne( HA_HMAC_SHA_512, m_graine, "Bitcoin seed") 
+      	//m_cléMaitre est une VariableProtégée //= buffer de 64 octets
+      	m_cléPriveeRacine est une VariableProtégée // Entier256 
+      	m_extraBits       est un buffer // 256 bits pour calculer les dérivations
+      	
+      	// cache des clé publique crée par la hiérarchie
+      	m_cléPubliqueRacine est cléPublique // racine
+      	m_Cacheclépub est un tableau associatif de cléPublique // les autres clé
+      FIN
+      
+      // options pour getPrivateKeyPair / getPublicKetPair
+      OptionGPKP est une énumération
+      	avecCléPubliqueParent
+      	cléPubliqueParentInutile
+      fin
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 2027587269592221064
+     type_code : 27
+     code : |1+
+      // construit avec un clé vide
+      PROCEDURE Constructeur( _pfDonneClé   est une procédure = null )
+      	Constructeur m_graine(_pfDonneClé)
+      	Constructeur m_cléPriveeRacine (_pfDonneClé)
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 2027587269592286600
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+     type : 655360
+   -
+     name : initFromSeed
+     procedure_id : 2027596512433724157
+     type_code : 12
+     code : |1+
+      // init a partir d'un seed (généralement obtient avec une liste de MOTS envoyé dans un fonction de hash)
+      // seed : de 128 a 512 bits
+      Procédure initFromSeed( _seed buffer )
+      dbgAssertion(taille(_seed)>=16)
+      dbgAssertion(taille(_seed)<=64)
+      
+      // garde le membre dans une zone cryptée
+      :m_graine.SetValeurSecret( _seed )
+      
+      // calcul de la clé maitre
+      CLÉBIP32 est chaine ANSI = "Bitcoin seed" // constante du bip 32
+      bufCléMaitre est buffer = HashChaîne( HA_HMAC_SHA_512, _seed, CLÉBIP32 )
+      dbgAssertion(Taille(bufCléMaitre)=64)
+      
+      // RAZ cache
+      m_Cacheclépub.SupprimeTout()
+      
+      // on extrait chaque partie de la clé maitre
+      cléPriveeRacine est un Entier256 
+      //extraBitsRacine est un buffer
+      cléPriveeRacine.affecteAvecBuffer(bufCléMaitre[1  À 32],Entier256::BUF_BIG_ENDIAN)
+      m_extraBits			   	       =  bufCléMaitre[33 À 64]
+      // garde la clé privée racine en crypté
+      m_cléPriveeRacine.SetValeurSecret(cléPriveeRacine)
+      
+      // Init clé publique racine déporté au 1er appel
+      //m_cléPubliqueRacine. initDepuisCléPrivée( cléPriveeRacine )
+      m_cléPubliqueRacine.RAZCléPub()
+      
+      // SECURTIE : 
+      VariableProtégée::DetruitSecret( cléPriveeRacine )
+      VariableProtégée::DetruitSecret( bufCléMaitre     )
+      
+     type : 458752
+   -
+     name : getPrivateKeyPairRoot
+     procedure_id : 2027644092347834970
+     type_code : 12
+     code : |1+
+      // calcul de la clé privée étendue racine
+      // renvoie <clé privé, extraBits >
+      PROCÉDURE getPrivateKeyPairRoot( ) : ( entier256, buffer  )
+      
+      
+      // résultat
+      cléPriveeNew est un Entier256 
+      m_cléPriveeRacine.GetValeurSecret_ADetruireRapidement(cléPriveeNew)
+      
+      
+      RENVOYER( cléPriveeNew, m_extraBits)
+     type : 458752
+   -
+     name : getPublicKeyPairRoot
+     procedure_id : 2027906085431651835
+     type_code : 12
+     code : |1-
+      // renvoie la clé publique racine + extension
+      procédure getPublicKeyPairRoot() : ( point256, Buffer  )
+      
+      // Init au 1er appel
+      si m_cléPubliqueRacine.estZéro() ALORS
+      	// récup clé privée
+      	cléPriveeRacine est un Entier256 
+      	m_cléPriveeRacine.GetValeurSecret_ADetruireRapidement(cléPriveeRacine)
+      	// Init clé publique racine
+      	m_cléPubliqueRacine.initDepuisCléPrivée( cléPriveeRacine )
+      	// Sécurité, enleve toute trace de la clé privée en clair de la mémoire
+      	VariableProtégée::DetruitSecret( cléPriveeRacine )
+      FIN
+      
+      
+      dbgAssertion (PAS m_cléPubliqueRacine.estZéro() )
+      renvoyer (m_cléPubliqueRacine, m_extraBits )
+     type : 458752
+   -
+     name : getPrivateKeyPair
+     procedure_id : 2027588807190673752
+     type_code : 12
+     code : |1+
+      // calcul de la clé privée étendue a la profondeur donnée. 0 = racine
+      // renvoie <clé privé, extraBits >
+      procédure getPrivateKeyPair( profondeur entier, adresseClé est un tableau d'entiers sur 4 sans signe, option est OptionGPKP, cléPriveeParent_OUT entier256,  cléPubliqueParent_OUT cléPublique ) : ( entier256, buffer  )
+      
+      dbgAssertion(profondeur>=0)
+      dbgAssertion(profondeur<=255)
+      
+      
+      // si on veut la racine
+      si profondeur = 0 alors
+      	renvoyer getPrivateKeyPairRoot()
+      fin
+      
+      numclé est entier SUR 4 sans signe = adresseClé[ profondeur ]
+      
+      //clé + extension parent
+      codeChainParent est un buffer // extension de clé précédente
+      cléPriveeParent est entier256 // clé précédente
+      cléPriveeUNUSED est entier256 // clé parent du parent (inutilisée) 
+      cléPubliqueUNUSED est cléPublique // clé parent du parent (inutilisée) 
+      // récursivement récup clé niveau parent
+      indiceParent est un entier sur 4 sans signe= 0//@TODO
+      (cléPriveeParent, codeChainParent) = getPrivateKeyPair(profondeur-1, adresseClé, cléPubliqueParentInutile, cléPriveeUNUSED,cléPubliqueUNUSED)
+      // MAJ résultat out
+      cléPriveeParent_OUT   = cléPriveeParent
+      
+      
+      bufLocal est un buffer
+      // si on veut une clé 'durcie'
+      si  numclé>=0x7FFFFFFF ALORS
+      	// I = HMAC-SHA512(Key = cpar, Data = 0x00 || ser256(kpar) || ser32(i))
+      	serPrivKey est un buffer = Caract(0) + cléPriveeParent.versbuffer( Entier256::BUF_BIG_ENDIAN )
+      	bufLocal = HashChaîne( HA_HMAC_SHA_512,  serPrivKey +  I4TobufferBigEndian(numclé) ,
+      											 codeChainParent )
+      	// Init param OUT si demandée 						
+      	si option<>cléPubliqueParentInutile alors					 
+      		cléPubliqueParent_OUT.initDepuisCléPrivée( cléPriveeParent  ) 								 
+      	fin
+      sinon
+      	// I = HMAC-SHA512(Key = cpar, Data = serP(point(kpar)) || ser32(i)).
+      	pubkeyParent est cléPublique 
+      	pubkeyParent.initDepuisCléPrivée( cléPriveeParent  ) 
+      	SI option<>cléPubliqueParentInutile ALORS				
+      		cléPubliqueParent_OUT = pubkeyParent
+      	fin
+      	// serP(P): serializes the coordinate pair P = (x,y) as a byte sequence using SEC1's compressed form:
+      	// (0x02 or 0x03) || ser256(x), where the header byte depends on the parity of the omitted y coordinate.
+      	serPubKey est un buffer = pubkeyParent.versbufferCompressé()
+      	bufLocal = HashChaîne( HA_HMAC_SHA_512,  serPubKey + I4TobufferBigEndian(numclé), 
+      											 codeChainParent )
+      FIN
+      dbgAssertion(Taille(bufLocal) = 64)
+      
+      // résultat
+      cléPriveeResultat est un Entier256 
+      codeChainResultat est un buffer
+      
+      // on en déduit les 2 partie nouvelles
+      //  =>The returned child key ki is parse256(IL) + kpar (mod n).
+      cléPriveeResultat.affecteAvecBuffer(bufLocal[1  a 32],Entier256::BUF_BIG_ENDIAN)
+      //cléPriveeResultat = ECDSA_Bitcoin.m_gpclEDCSA.corpsOrdre.additionModulo(cléPriveeParent, cléPriveeResultat)
+      cléPriveeResultat = ECDSA_Bitcoin.additionCléPrivé(cléPriveeParent, cléPriveeResultat)
+      
+      codeChainResultat 				=  bufLocal[33 À 64]
+      renvoyer( cléPriveeResultat, codeChainResultat)
+      
+      
+     type : 458752
+   -
+     name : _GetPrefixHexa
+     procedure_id : 2027640789517870737
+     type_code : 12
+     code : |1+
+      // récup du préfixe sur 4 octet au format chaine hexa sur 8 selon le type de réseau et de clé
+      // <nNetwork> : ex BtcNet_Test
+      Procédure globale _GetPrefixHexa( nNetwork est BtcNetwork , bPublic est un booléen  ) : chaine
+      
+      // extrait du BIP 32 :
+      //  4 byte: version bytes (mainnet: 0x0488B21E public, 0x0488ADE4 private; testnet: 0x043587CF public, 0x04358394 private)
+      SELON nNetwork 
+      	cas BtcNet_Main
+      		si bPublic renvoyer "0488B21E" sinon renvoyer "0488ADE4"
+      	cas BtcNet_Test
+      		SI bPublic RENVOYER "043587CF" SINON RENVOYER "04358394"
+      	CAS BtcNet_Simu // simnet non décrit dans la norme, on met comme TestNet..
+      		SI bPublic RENVOYER "043587CF" SINON RENVOYER "04358394"
+      	CAS BtcNet_TestAuto // comme simnet
+      		SI bPublic RENVOYER "043587CF" SINON RENVOYER "04358394"
+      	AUTRE CAS
+      		dbgAssertion(faux, "nNetwork invalide" )
+      		renvoyer "00000000"
+      FIN
+     type : 458752
+   -
+     name : getPrivateSerialised58
+     procedure_id : 2027639496658031015
+     type_code : 12
+     code : |1-
+      // renvoie la clé privé et son extension au format base58
+      // <nNetwork> : ex BtcNet_Test
+      procédure getPrivateSerialised58( nNetwork est BtcNetwork, adresseClé est un tableau d'entiers sur 4 sans signe ) : chaine
+      
+      profondeur est entier = adresseClé.Occurrence()
+      numClé est un entier sur 4 octet sans signe 
+      si profondeur>0 ALORS
+      	numClé = adresseClé[profondeur]
+      FIN
+      
+      
+      // récup clé privé + extension + clé privée parent
+      cléPriveeNew      est un Entier256 
+      cléPriveeParent   est un Entier256 
+      cléPubliqueParent est un cléPublique
+      extraBitsNew est un buffer
+      option est OptionGPKP = avecCléPubliqueParent
+      SI profondeur = 0 ALORS
+      	// on a en a pas besoin (OPTIM)
+      	option = cléPubliqueParentInutile
+      FIN
+      
+      (cléPriveeNew,extraBitsNew)=getPrivateKeyPair( profondeur, adresseClé, option, cléPriveeParent, cléPubliqueParent)
+      dbgAssertion(Taille(extraBitsNew) = 32)
+      
+      
+      // 4 byte: version bytes (mainnet: 0x0488B21E public, 0x0488ADE4 private; testnet: 0x043587CF public, 0x04358394 private)
+      serialBuf est buffer = HexaVersBuffer(_GetPrefixHexa(nNetwork, faux) ) 
+      // 1 byte : profondeur
+      serialBuf += caract(profondeur)
+      // 4 bytes: the fingerprint of the parent's key (0x00000000 if master key)
+      si profondeur = 0 alors
+       	serialBuf += HexaVersBuffer("00000000")
+      sinon
+      	// fingerprint : les 4 premiers octets de la clé publique + sha
+      	id 		 est buffer = cléPubliqueParent.versbufferCompressé()
+      	idSha256 est buffer = HashChaîne( HA_SHA_256,  id )
+      	idsha160 est buffer = HashChaîne( HA_RIPEMD_160, idSha256 )
+      	
+      	serialBuf += Gauche( idsha160 , 4 )
+      fin
+      // 4 byte : n° de clé. 0 si clé maitre
+      serialBuf += I4ToBufferBigEndian(numClé)
+      // 32 bytes: the chain code
+      serialBuf += extraBitsNew
+      // 33 bytes: the public key or private key data (serP(K) for public keys, 0x00 || ser256(k) for private keys)
+      serialBuf += Caract(0)
+      serialBuf += cléPriveeNew.versbuffer( Entier256::BUF_BIG_ENDIAN )
+      dbgAssertion(Taille(serialBuf) = 78)
+      
+      //+Checksum
+      sChecksumCalc est buffer = sCalcCheckSum4(serialBuf)
+      serialBuf += sChecksumCalc
+      
+      // renvoie le résulta encodé en base 58
+      renvoyer encodeBASE58Raw(serialBuf)
+     type : 458752
+   -
+     name : getPublicKeyPair
+     procedure_id : 2027903920768089325
+     type_code : 12
+     code : |1+
+      // calcul de la clé publique étendue a la profondeur donnée. 0 = racine
+      // renvoie <clé privé, extraBits >
+      procédure getPublicKeyPair( profondeur entier, adresseClé est un tableau d'entiers sur 4 sans signe, option est OptionGPKP,  cléPubliqueParent_OUT cléPublique ) : ( cléPublique, buffer  )
+      
+      dbgAssertion(profondeur>=0)
+      dbgAssertion(profondeur<=255)
+      
+      // si on veut la racine
+      si profondeur = 0 alors
+      	// récup clé racine
+      	renvoyer getPublicKeyPairRoot()
+      fin
+      
+      
+      numclé est entier sur 4 sans signe = adresseClé[profondeur]
+      // si on veut une clé durcie
+      bCléDurcie est un booléen = numclé>=0x7FFFFFFF
+      
+      //clé + extension parent 
+      cléPubliqueParent est cléPublique // clé précédente
+      codeChainParent est un buffer     // extension de clé précédente
+      // OPTIM, on en a pas besoin si clé durcie + clé publique parent non requise
+      si (PAS bCléDurcie) _Ou_ option<>cléPubliqueParentInutile ALORS
+      	cléPubliqueUNUSED est cléPublique // clé parent du parent (inutilisée) 
+      	// récursivement récup clé niveau parent
+      	(cléPubliqueParent, codeChainParent) = getPublicKeyPair(profondeur-1, adresseClé, cléPubliqueParentInutile, cléPubliqueUNUSED)
+      	// MAJ param OUT
+      	SI option<>cléPubliqueParentInutile ALORS
+      		cléPubliqueParent_OUT = cléPubliqueParent
+      	FIN	
+      fin
+      
+      
+      bufLocal est un buffer
+      // si on veut une clé publique 'durcie'
+      si  bCléDurcie ALORS
+      	//  il faut la clé privée
+      	cléPubliqueUNUSED2 est cléPublique
+      	cléPriveeUNUSED    est entier256
+      	cléPriveeTemp      est entier256
+      	codeChainResultat  est buffer
+      	(cléPriveeTemp, codeChainResultat) = getPrivateKeyPair(profondeur,adresseClé,cléPubliqueParentInutile,cléPriveeUNUSED,cléPubliqueUNUSED2)
+      	// on en dérive la clé publique et on garde la meme extension
+      	cléPubliqueDérivée est cléPublique 
+      	cléPubliqueDérivée.initDepuisCléPrivée(cléPriveeTemp)
+      	renvoyer (cléPubliqueDérivée,codeChainResultat )
+      sinon
+      
+      	// serP(P): serializes the coordinate pair P = (x,y) as a byte sequence using SEC1's compressed form:
+      	// (0x02 or 0x03) || ser256(x), where the header byte depends on the parity of the omitted y coordinate.
+      	serPubKey est un buffer = cléPubliqueParent.versbufferCompressé()
+      	bufLocal = HashChaîne( HA_HMAC_SHA_512,  serPubKey + I4TobufferBigEndian(numclé), 
+      											 codeChainParent )
+      FIN
+      dbgAssertion(Taille(bufLocal) = 64)
+      
+      // résultat
+      cléPubliqueResultat est un cléPublique 
+      codeChainResultat est un buffer
+      
+      // on en déduit les 2 partie nouvelles
+      //  =>The returned child key Ki is point(parse256(IL)) + Kpar.
+      cléPriveeTemp est entier256
+      cléPriveeTemp.affecteAvecBuffer(bufLocal[1  a 32],Entier256::BUF_BIG_ENDIAN)
+      cléPubliqueResultat.initDepuisCléPrivée(cléPriveeTemp) // =  K * pointGen
+      // = point(parse256(IL)) + Kpar.
+      pointres est point256 = ECDSA_Bitcoin.additionCléPlublique(cléPubliqueResultat, cléPubliqueParent)
+      cléPubliqueResultat.initDepuisPoint(pointres )
+      codeChainResultat 				=  bufLocal[33 À 64]
+      renvoyer( cléPubliqueResultat, codeChainResultat)
+     type : 458752
+   -
+     name : getPublicKeyFromPath
+     procedure_id : 2029099068481532060
+     type_code : 12
+     code : |1+
+      // récup de la clé publique selon le chemin au format "m/0/1"
+      procédure getPublicKeyFromPath( sChemin est chaine ) : cléPublique
+      
+      // si on l'a en cahce
+      si m_Cacheclépub[sChemin]..existe ALORS
+      	renvoyer m_Cacheclépub[sChemin]
+      FIN
+      
+      // transformatin du chemin chaine au format interne
+      addrclé est tableau d'Entier sur 4 sans signe
+      chaineVersAdresséClé( sChemin, addrclé)
+      
+      // calcul clé étendue
+      cléPubliqueResultat est un cléPublique 
+      cléPubliqueParent_UNUSED est un cléPublique 
+      codeChainResultat est un buffer
+      (cléPubliqueResultat, codeChainResultat) = getPublicKeyPair(addrclé.Occurrence(),addrclé,cléPubliqueParentInutile,cléPubliqueParent_UNUSED )
+      
+      // ajouter au cache
+      m_Cacheclépub[sChemin] = cléPubliqueResultat
+      
+      
+      renvoyer cléPubliqueResultat
+      
+     type : 458752
+   -
+     name : getPrivateKeyFromPath
+     procedure_id : 2029108216905691638
+     type_code : 12
+     code : |1+
+      // récup de la clé publique selon le chemin au format "m/0/1"
+      PROCÉDURE getPrivateKeyFromPath( sChemin est chaîne ) : entier256
+      
+      // transformation du chemin chaine au format interne
+      addrclé est tableau d'entier sur 4 sans signe
+      chaineVersAdresséClé( sChemin, addrclé)
+      
+      // calcul clé étendue
+      cléPrivééResultat est un entier256 
+      cléPubliqueParent_UNUSED est un cléPublique 
+      cléPrivéeParent_UNUSED est un entier256 
+      codeChainResultat est un Buffer
+      (cléPrivééResultat, codeChainResultat) = getPrivateKeyPair(addrclé.Occurrence(),addrclé, cléPubliqueParentInutile, cléPrivéeParent_UNUSED,cléPubliqueParent_UNUSED )
+      
+      RENVOYER cléPrivééResultat
+      
+     type : 458752
+   -
+     name : getPublicSerialised58
+     procedure_id : 2027911574399888595
+     type_code : 12
+     code : |1+
+      // renvoie la clé publique et son extension au format base58
+      // <nNetwork> : ex BtcNet_Test
+      procédure getPublicSerialised58( nNetwork est BtcNetwork, adresseClé est un tableau d'entiers sur 4 sans signe	)
+      
+      profondeur est entier = adresseClé.Occurrence()
+      numClé est un entier sur 4 octet sans signe 
+      si profondeur>0 ALORS
+      	numClé = adresseClé[profondeur]
+      FIN
+      
+      // récup clé publique + extension + clé publique parent
+      _cléPublique      est un cléPublique 
+      cléPubliqueParent est un cléPublique 
+      extraBits		  est un buffer
+      (_cléPublique,extraBits)=getPublicKeyPair( profondeur, adresseClé, avecCléPubliqueParent, cléPubliqueParent)
+      dbgAssertion(Taille(extraBits) = 32)
+      
+      
+      // 4 byte: version bytes (mainnet: 0x0488B21E public, 0x0488ADE4 private; testnet: 0x043587CF public, 0x04358394 private)
+      serialBuf est buffer = HexaVersBuffer(_GetPrefixHexa(nNetwork, vrai) ) 
+      // 1 byte : profondeur
+      serialBuf += caract(profondeur)
+      // 4 bytes: the fingerprint of the parent's key (0x00000000 if master key)
+      si profondeur = 0 alors
+       	serialBuf += HexaVersBuffer("00000000")
+      sinon
+      	// fingerprint : les 4 premiers octets de la clé publique parent + sha
+      	id 		 est buffer = cléPubliqueParent.versbufferCompressé()
+      	idSha256 est buffer = HashChaîne( HA_SHA_256,  id )
+      	idsha160 est buffer = HashChaîne( HA_RIPEMD_160, idSha256 )
+      	
+      	serialBuf += Gauche( idsha160 , 4 )
+      fin
+      // 4 byte : n° de clé. 0 si clé maitre
+      serialBuf += I4ToBufferBigEndian(numClé)
+      // 32 bytes: the chain code
+      serialBuf += extraBits
+      // 33 bytes: the public key or private key data (serP(K) for public keys, 0x00 || ser256(k) for private keys)
+      serialBuf += _cléPublique.versbufferCompressé()
+      dbgAssertion(Taille(serialBuf) = 78)
+      
+      //+Checksum
+      sChecksumCalc est buffer = sCalcCheckSum4(serialBuf)
+      serialBuf += sChecksumCalc
+      
+      // renvoie le résulta encodé en base 58
+      renvoyer encodeBASE58Raw(serialBuf)
+      
+     type : 458752
+   -
+     name : chaineVersAdresséClé
+     procedure_id : 2028673385235127888
+     type_code : 12
+     code : |1+
+      // transforme un chaine au format "m/iH/0/k"
+      // en un tableau d'entier avec les indice a chaque profondeur.
+      // adresseClé vide = racine
+      // adresseClé[1] = clé de plus haut niveau (=1er fils de la racine)
+      // ex:  m/0H/1/4  = [0x80000000, 1, 4 ]
+      procédure chaineVersAdresséClé( local adresseFormatChaine est chaine, adresseClé est un tableau d'entiers sur 4 sans signe  )
+      
+      // RAZ résultat out 
+      adresseClé.SupprimeTout()
+      
+      // "m" seul = racine
+      SI adresseFormatChaine="m" ALORS
+      	
+      	retour
+      FIN
+      
+      // doit commencer par m/
+      si gauche(adresseFormatChaine,2)<>"m/" ALORS
+      	dbgAssertion(faux)
+      	retour
+      FIN
+      
+      // extrait les partie, 255 max
+      pour i= 2 a 255
+      	sPartie est chaine = ExtraitChaîne(adresseFormatChaine,i,"/")
+      	si sPartie ="" ou sPartie =EOT ALORS
+      		// terminé
+      		retour
+      	FIN
+      	// chaine vers entier
+      	numClé est un entier sur 4 octet sans signe = val(sPartie)
+      	// si fini par un "H" ou un ' (BBIP44)
+      	sFin est une chaîne = Droite(sPartie,1)
+      	si sFin = "H" _ou_ sFin = "'"
+      		numClé += 0x80000000 // indice de clé durcie
+      	fin
+      	adresseClé.Ajoute( numClé )
+      FIN
+      
+      
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1c236fd90b22e5bc
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

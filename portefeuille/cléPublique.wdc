@@ -1,0 +1,326 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : cléPublique
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1c2657b504da896c
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      cléPublique est une Classe
+      	herite de point256
+      FIN
+      
+      TypeAddresse est une énumération
+      	Compressée	  // format avec le signe(2/3) + X
+      	NonCompresséeHistorique // vieux format avec x,y
+      	ScriptHash	  // paiement vers le hash d'un script / segwit.  BIP13/BIP16
+      	SewgitNatif	  // paiement vers le segwit natif.  
+      fin
+      
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 2028405117159180652
+     type_code : 27
+     code : |1+
+      PROCEDURE Constructeur()
+      
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 2028405117159246188
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+      
+     type : 655360
+   -
+     name : RAZCléPub
+     procedure_id : 2148129534096251626
+     type_code : 12
+     code : |1-
+      procédure RAZCléPub()
+      :x.affecteAvecEntierPositif(0)
+      :y.affecteAvecEntierPositif(0)
+     type : 458752
+   -
+     name : initDepuisPoint
+     procedure_id : 2028408974115748805
+     type_code : 12
+     code : |1+
+      // Init a partir d'un point de la courbe EDCSA
+      procédure initDepuisPoint( pointSrc point256 )
+      // on vérifie la validité du point
+      si pas( ECDSA_BITCOIN.clépubliqueEstValide(pointSrc)) ALORS
+      	dbgAssertion(Faux, "Clé publique invalide.")
+      	renvoyer faux
+      FIN
+      
+      // copie X et Y
+      :x = pointSrc.x
+      :y = pointSrc.y
+      
+      // init OK
+      renvoyer vrai
+     type : 458752
+   -
+     name : initDepuisCléPrivée
+     procedure_id : 2028407384943270196
+     type_code : 12
+     code : |1+
+      Procédure initDepuisCléPrivée(cléPrivee est entier256 )
+      
+      // on en déduit la clé publique
+      point est point256 = ECDSA_Bitcoin.DériveCléPubliqueDepuisCléPrivée( cléPrivee  )
+      initDepuisPoint(point)
+      
+     type : 458752
+   -
+     name : initDepuisBufferNonCompressé
+     procedure_id : 2028724199027843986
+     type_code : 12
+     code : |1-
+      // init a partir du format de sérialisation RAW non compressé
+      // 0X04 + X (32 bits) + Y (32 bits)
+      procédure initDepuisBufferNonCompressé( bufSPubKey est buffer ) : booléen
+      
+      // validation paramètre
+      si bufSPubKey="" ALORS renvoyer faux
+      
+      cFormat est entier = Asc(bufSPubKey[1])
+      si cFormat<>4 alors renvoyer faux
+      
+      si Taille(bufSPubKey)<>65 ALORS
+      	dbgAssertion(faux,"taille buffer invalide")
+      	renvoyer faux
+      FIN
+      
+      // extrait les parties X et Y
+      bufX est un buffer = Milieu(bufSPubKey,2, 32)
+      bufY est un buffer = Milieu(bufSPubKey,34,32)
+      // affectation de x et y, 
+      pointRes est point256 
+      pointRes.x.affecteAvecBuffer(bufX, Entier256::BUF_BIG_ENDIAN)
+      pointRes.y.affecteAvecBuffer(bufY, Entier256::BUF_BIG_ENDIAN)
+      
+      // init a partir de ce point + vérifie que la clé publique est OK
+      si pas initDepuisPoint( pointRes ) ALORS
+      	renvoyer faux
+      FIN
+      
+      
+      // OK
+      renvoyer Vrai
+     type : 458752
+   -
+     name : versbufferCompressé
+     procedure_id : 2028405709903143826
+     type_code : 12
+     code : |1+
+      // renvoie la clé publique au format binaire compressé. cas commencant par 2 ou 3
+      procédure versbufferCompressé() : buffer
+      
+      // (0x02 or 0x03) || ser256(x), where the header byte depends on the parity of the omitted y coordinate.
+      serPubKey est un buffer
+      SI EstImpair(y.val0) ALORS
+      	serPubKey = Caract(3)
+      SINON
+      	serPubKey = Caract(2)
+      FIN
+      // cood X au format BIG endian, ie poids fort au début.
+      serPubKey+=x.versbuffer( Entier256::BUF_BIG_ENDIAN )
+      
+      renvoyer serPubKey
+     type : 458752
+   -
+     name : versbufferNonCompressé
+     procedure_id : 2028723151055710475
+     type_code : 12
+     code : |1+
+      // renvoie la clé publiqué au format binaire non compressé (Ancien mode)
+      procédure versbufferNonCompressé() : buffer
+      
+      serPubKey est un buffer
+      serPubKey =  Caract(4) + x.versbuffer( Entier256::BUF_BIG_ENDIAN ) + y.versbuffer( Entier256::BUF_BIG_ENDIAN )
+      renvoyer serPubKey
+     type : 458752
+   -
+     name : nGetByteVersionFromNetwork
+     procedure_id : 2084263799681693524
+     type_code : 12
+     code : |1+
+      // renvoie l'entier a utiliser en préfixe dans l'encodage base 58 des adresse
+      Procédure globale nGetByteVersionFromNetwork( nNetwork est btcNetwork, option est TypeAddresse = Compressée  ) : entier
+      
+      
+      byteVersion est un entier = 0 // 0x00 : Main Net, Pubkey hash (P2PKH address), ex 17VZNX1SN5NtKa8UQFxwQbFeFc3iqRYhem
+      SELON nNetwork
+      	CAS   BtcNet_Main
+      		SI option = ScriptHash ALORS
+      			byteVersion = PREFIX_ScriptHash_P2SH_MainNet  // 0x05. ex : 3EktnHQD7RiAE6uzMj2ZifT9YgRrkSgzQX
+      		SINON
+      			byteVersion = PREFIX_Pubkey_P2PKH_MainNet  // 0x00 : Main Net, Pubkey hash (P2PKH address), ex 17VZNX1SN5NtKa8UQFxwQbFeFc3iqRYhem
+      		FIN
+      	CAS   BtcNet_Test
+      		SI option = ScriptHash ALORS
+      			byteVersion = PREFIX_ScriptHash_P2SH_TestNet  // 196
+      		SINON
+      			byteVersion = PREFIX_Pubkey_P2PKH_TestNet  // 0x6F : Testnet pubkey hash, ex mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn
+      		FIN
+      	CAS BtcNet_Simu,BtcNet_TestAuto
+      		SI option = ScriptHash ALORS
+      			byteVersion = PREFIX_ScriptHash_P2PSH_SimNet 
+      		SINON
+      			byteVersion = PREFIX_Pubkey_P2PKH_SimNet 
+      		FIN
+      	AUTRE CAS
+      		dbgAssertion(Faux)
+      		RENVOYER "" // non supporté
+      FIN
+      renvoyer byteVersion
+     type : 458752
+   -
+     name : versAdresse160Bits
+     procedure_id : 2029103191745533971
+     type_code : 12
+     code : |1+
+      // revoie l'adresse au format RAW (=buffer binaire de 160 bits)
+      procédure versAdresse160Bits( option est TypeAddresse = Compressée ) : buffer
+      
+      // calcul de l'octet de version dans
+      //    base58-encode: [one-byte version][20-byte hash][4-byte checksum]
+      //byteVersion est un entier = 0 // 0x00 : Main Net, Pubkey hash (P2PKH address), ex 17VZNX1SN5NtKa8UQFxwQbFeFc3iqRYhem
+      //byteVersion = nGetByteVersionFromNetwork(nNetwork,option)
+      
+      
+      
+      // calcul buffer raw de la clé publique
+      sBufferPubKey est buffer //= publicKey.versbufferCompressé()
+      SI option<>NonCompresséeHistorique ALORS
+      	sBufferPubKey  = versbufferCompressé()
+      	
+      SINON
+      	sBufferPubKey = versbufferNonCompressé() // "04" +  pubKey.X.VersChaineHexa() + pubKey.Y.VersChaineHexa()
+      FIN
+      
+      // calcul adresse public 
+      // 2 hachages avec 2 algo différents:
+      // RIPEMD 160
+      // SHA2 256
+      //sPubaddr 		est un buffer =  HashChaîne(HA_SHA_256,sBuffer)
+      //sPubaddrHash160 est un buffer =  HashChaîne(HA_RIPEMD_160,sPubaddr)
+      
+      SI option = ScriptHash ALORS
+      	//bufscript est un buffer =  0 + OP_PUSH20BYTE + sBufferPubKey 
+      	bufscript est un buffer =  Caract(0) + Caract(0x14) + bitcoinScript::sCalc_HASH160(sBufferPubKey)
+      	RENVOYER bitcoinScript::sCalc_HASH160( bufscript  )
+      FIN
+      SI option = SewgitNatif ALORS
+      	
+      	//bufscript est un buffer =  Caract(0) + Caract(0x14) + bitcoinScript::sCalc_HASH160(sBufferPubKey)
+      	//RENVOYER bitcoinScript::sCalc_HASH160( bufscript  )
+      	RENVOYER bitcoinScript::sCalc_HASH160( sBufferPubKey  )
+      FIN
+      
+      
+      
+      renvoyer bitcoinScript::sCalc_HASH160( sBufferPubKey )
+      
+      
+     type : 458752
+   -
+     name : init_Partielle_DepuisBufferCompressé
+     procedure_id : 2132642182410748400
+     type_code : 12
+     code : |1+
+      // init partielle a partir du format de sérialisation RAW compressé
+      // pour TA: recalcul rapide de l'adresse
+      PROCÉDURE init_Partielle_DepuisBufferCompressé( bufSPubKey est buffer ) : booléen
+      
+      
+      // validation paramètre
+      SI bufSPubKey="" ALORS RENVOYER Faux
+      
+      // 2 et 3 seulement OK comme préfixes
+      cFormat est entier = Asc(bufSPubKey[1])
+      SI cFormat<>2 _ET_ cFormat<>3 ALORS RENVOYER Faux
+      
+      SI Taille(bufSPubKey)<33 ALORS
+      	dbgAssertion(Faux)
+      	RENVOYER Faux
+      FIN
+      
+      bEstImpair est un booléen  = (cFormat=3)
+      sX est un Buffer = Milieu(bufSPubKey,2,32)
+      :x.affecteAvecBuffer(sX,Entier256::BUF_BIG_ENDIAN)
+      
+      SI bEstImpair ALORS
+      	:y.affecteAvecEntierPositif(1)
+      SINON
+      	:y.affecteAvecEntierPositif(0)
+      FIN
+     type : 458752
+   -
+     name : initDepuisBufferCompressé
+     procedure_id : 2028726131765674713
+     type_code : 12
+     code : |1-
+      // init a partir du format de sérialisation RAW compressé
+      procédure initDepuisBufferCompressé( bufSPubKey est buffer ) : booléen
+      
+      // validation paramètre
+      si bufSPubKey="" ALORS renvoyer faux
+      
+      // 2 et 3 seulement OK comme préfixes
+      cFormat est entier = Asc(bufSPubKey[1])
+      si cFormat<>2 _et_ cFormat<>3 alors renvoyer faux
+      
+      SI Taille(bufSPubKey)<33 ALORS
+      	dbgAssertion(Faux)
+      	RENVOYER Faux
+      FIN
+      
+      bEstImpair est un booléen  = (cFormat=3)
+      sX est un Buffer = Milieu(bufSPubKey,2,32)
+      :X.affecteAvecBuffer(sX,Entier256::BUF_BIG_ENDIAN)
+      //@TODO ; calcul de la racine carré modulaire de x puis choix de la version paire/impaire
+      dbgAssertion(Faux,"TODO")
+      SI bEstImpair ALORS
+      	:Y.affecteAvecEntierPositif(1)
+      SINON
+      	:Y.affecteAvecEntierPositif(0)
+      FIN
+      
+      // on vérifie que la clé publique est OK
+      si pas ECDSA_Bitcoin.clépubliqueEstValide( objet ) ALORS
+      	// RAZ
+      	:x.affecteAvecEntierPositif(0)
+      	:x.affecteAvecEntierPositif(0)
+      	dbgAssertion(Faux)
+      	renvoyer faux
+      FIN
+      
+      // OK
+      renvoyer Vrai
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1c26579504d70bef
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

@@ -1,0 +1,333 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : BitcoinUtil
+ major_version : 25
+ minor_version : 0
+ type : 7
+ description : ""
+ subtype : 0
+procedure_set :
+ identifier : 0x1a801729009c5902
+ internal_properties : BQAAAAUAAABGLu41kG7fjQV3iS4F72qmnKaNh5694reolNKIW0iw
+ code_elements :
+  type_code : 31
+  p_codes :
+   -
+     code : |1+
+      
+      CONSTANT
+      	//	Liste des préfixe pour l'encodage en base 58 + check
+      	PREFIX_Pubkey_P2PKH_MainNet    = 0x00	// ex : 17VZNX1SN5NtKa8UQFxwQbFeFc3iqRYhem
+      	PREFIX_ScriptHash_P2SH_MainNet = 0x05	// ex : 3EktnHQD7RiAE6uzMj2ZifT9YgRrkSgzQX
+      	PREFIX_Pubkey_P2PKH_TestNet    = 0x6F	// ex : mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn
+      	PREFIX_ScriptHash_P2SH_TestNet = 0xC4   // 
+      	PREFIX_PrivateKey_WIF_MainNet  = 0x80    // ex : 5Hwgr3u458GLafKBgxtssHSPqJnYoGrSzgQsPwLFhLNYskDPyyA
+      	PREFIX_PrivateKey_WIF_TestNet  = 0xEF
+      	PREFIX_PrivateKey_WIF_SimNet   = 0x41 //@A déterminer
+      	PREFIX_PrivateKey_WIF_AutoTest = 0x42 //@A déterminer
+      	PREFIX_Pubkey_P2PKH_SimNet	   = 0x3F  
+      	PREFIX_ScriptHash_P2PSH_SimNet = 0x40 //@Au pif
+      FIN
+      
+     type : 720896
+  procedures :
+   -
+     name : décodeBASE58Check
+     procedure_id : 1909551986049373930
+     type_code : 15
+     code : |1+
+      PROCEDURE décodeBASE58Check( s chaine, nPrefixe_OUT entier, sErreur_OUT chaine ): buffer
+      
+      // décodage rax
+      sBufRaw est un buffer = decodeBASE58Raw( s, sErreur_OUT )
+      si sBufRaw="" ALORS
+      	RENVOYER sBufRaw// Erreur
+      FIN
+      
+      // récup préfixe
+      nPrefixe_OUT = asc(sBufRaw[[1]])
+      
+      // récup RCR
+      sCRC est un buffer = Droite(sBufRaw,4)
+      
+      // récup buffer résultat
+      sRes est un buffer = Milieu( sBufRaw, 2, Taille(sBufRaw) -1-4 )
+      
+      // vérif CRC
+      // calcul su checksum
+      sChecksumCalc est buffer = _sCalcCheckSum(sRes, nPrefixe_OUT)
+      si sChecksumCalc<>sCRC ALORS
+      	sErreur_OUT = "CRC invalide"
+      	RENVOYER ""// Erreur
+      FIN
+      
+      
+      
+      
+      renvoyer sRes
+      
+      
+     type : 458752
+   -
+     name : _sinverseEndian
+     procedure_id : 2026529990832611574
+     type_code : 15
+     code : |1-
+      // inversion de l'endienness
+      procédure privée _sinverseEndian(buf est un buffer) : buffer
+      sBufferInverse est un Buffer 
+      POUR i=1 _À_ Taille(buf)
+      	sBufferInverse = buf[i] + sBufferInverse
+      FIN
+      renvoyer sBufferInverse
+     type : 458752
+   -
+     name : decodeBASE58Raw
+     procedure_id : 1909551986049439497
+     type_code : 15
+     code : |1+
+      // convertir une chaine au format base58 en un buffer
+      procédure decodeBASE58Raw( sSource chaine, sError_OUT chaine ) : buffer
+      
+      // caractère pour l'encodage 58
+      soit DIGITS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+      dbgAssertion( Taille(DIGITS) = 58 )
+      
+      
+      nTailleRes est entier = taille(sSource) * 733 /1000 + 1; // log(58) / log(256) arrondi a l'unité supérieure.
+      sResultatLE est un buffer = Répète(caract(0),nTailleRes)
+      sResERREUR est un buffer // vide
+      
+      // itération sur le caractères a décoder
+      POUR i = 1 a taille(sSource) //a 1 pas -1
+      	// récup valeur encodée de 0 a 57
+      	nVal est un entier sur 4 sans signe= position( DIGITS, sSource[[i]] )  - 1
+      	// si non trouvé
+      	si nVal<0 ALORS
+      		sError_OUT = ChaîneConstruit( "caractère %1 invalide",  sSource[[i]] )
+      		renvoyer sResERREUR
+      	FIN
+      	dbgAssertion(nVal>=0)
+      	dbgAssertion(nVal<=57)
+      
+      	// nData = nData*58 + nVal
+      	sResultatLE =	_multiplieBufferPar58(sResultatLE,nVal)
+      
+      	
+      FIN
+      
+      // inversion du buffer de Low Endian vers Big Endian
+      sResultatBE est un buffer = _sinverseEndian( sResultatLE )
+      
+      
+      //enlever les 0 initiaux en trop
+      soit nbZeroTrouve = nNbCaractAuDebut( sResultatBE, caract(0) )
+      soit nbZeroOK     = nNbCaractAuDebut( sSource,   "1")
+      si nbZeroTrouve > nbZeroOK alors
+      	nbZeroEnTrop est entier = nbZeroTrouve - nbZeroOK
+      	sResultatBE = Milieu(sResultatBE, 1 + nbZeroEnTrop)
+      fin
+      
+      renvoyer sResultatBE
+     type : 458752
+   -
+     name : encodeBASE58Check
+     procedure_id : 1909551986049505080
+     type_code : 15
+     code : |1+
+      // encodage avec préfixe + CRC sha256
+      PROCEDURE encodeBASE58Check( s est un buffer, nPrefix entier ) : chaine
+      
+      // calcul su checksum
+      sChecksumCalc est buffer = _sCalcCheckSum(s, nPrefix)
+      
+      
+      // calcul adresse finale
+      sAveCrcEtPrefixe est un buffer =  caract(nPrefix)  + s + sChecksumCalc
+      
+      
+      // on encode ca en base 58
+      renvoyer encodeBASE58Raw( sAveCrcEtPrefixe )
+     type : 458752
+   -
+     name : encodeBASE58Raw
+     procedure_id : 1909551986049570663
+     type_code : 15
+     code : |1+
+      // enocde un buffer en base 58, LOW EDIAN
+      PROCEDURE encodeBASE58Raw( bufSourceBE est un buffer) : chaine
+      
+      
+      // inversion du buffer de Big Endian vers Low Endian v
+      bufferSourceLE est un buffer = _sinverseEndian( bufSourceBE )
+      
+      // caractère pour l'encodage 58
+      soit DIGITS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+      dbgAssertion( taille(DIGITS) = 58 )
+      
+      // construit un buffer de taille multiple de 4
+      bufTailleMiluplieDe4 est buffer = bufferSourceLE
+      TANTQUE Taille(bufTailleMiluplieDe4) modulo 4 > 0 
+      	bufTailleMiluplieDe4 += Caract(0) // LE, poids fort à la fin
+      FIN
+      
+      
+      //sResultat_DBG est une chaîne
+      sResultat est une chaîne
+      tantque bufTailleMiluplieDe4<>""
+      	
+      	// division euclidienne du buffer par 58
+      	c est entier = _diviseBufferPar58(bufTailleMiluplieDe4)
+      	
+      	// récup indice
+      	nModI4 est entier =  c+1 // nModulo._32Bits(0)+1
+      	dbgAssertion(nModI4<=58)
+      	sResultat = DIGITS[[ nModI4 ]] + sResultat
+      	// suite..
+      	//nData = quotient
+      FIN
+      
+      // ajouter des 1 au début pour les '0' au début du buffer
+      pour i = 1 _a_ taille(bufSourceBE)
+      	si asc(bufSourceBE[[i]])<>0 ALORS
+      		sortir
+      	FIN
+      	sResultat = "1" + sResultat
+      FIN
+      
+      
+      renvoyer  sResultat
+      
+     type : 458752
+   -
+     name : sCalcCheckSum4
+     procedure_id : 2027607984476102094
+     type_code : 15
+     code : |1-
+      PROCÉDURE sCalcCheckSum4(sForChecksum buffer) 
+      
+      // 2x SHA256
+      hBuffer est un buffer =  HashChaîne(HA_SHA_256, HashChaîne(HA_SHA_256,sForChecksum))
+      // on garde les 4 premiers octets 
+      sChecksum est un buffer = gauche(hBuffer,4) 
+      
+      RENVOYER sChecksum
+     type : 458752
+   -
+     name : _sCalcCheckSum
+     procedure_id : 1909552295287485317
+     type_code : 15
+     code : |1-
+      PROCEDURE _sCalcCheckSum(s buffer, nPrefix entier)
+      
+      RENVOYER sCalcCheckSum4( Caract(nPrefix) + s )
+      
+      //sForChecksum est buffer = caract(nPrefix) + s
+      //// 2x SHA256
+      //sForChecksum =  HashChaîne(HA_SHA_256,sForChecksum)
+      //sForChecksum =  HashChaîne(HA_SHA_256,sForChecksum)
+      //// on garde les 4 premiers octets 
+      //sChecksum est un buffer = gauche(sForChecksum,4) 
+      //
+      //renvoyer sChecksum
+     type : 458752
+   -
+     name : nNbCaractAuDebut
+     procedure_id : 1909552295287550900
+     type_code : 15
+     code : |1+
+      // renvoie le nombre de caratère c au début de s
+      PROCEDURE nNbCaractAuDebut(local s chaine , c chaine) : entier
+      
+      soit nRes = 0
+      tantque s[[nRes+1]] = c
+      	nRes++
+      FIN
+      renvoyer nRes
+      
+      
+      
+      
+     type : 458752
+   -
+     name : _multiplieBufferPar58
+     procedure_id : 2026508580386623379
+     type_code : 15
+     code : |1+
+      // traite un buffer comme un entier de taille N,  Low endia.
+      // le multiplie par 58 et ajoute nAdd
+      PROCÉDURE  _multiplieBufferPar58(  bufINT est buffer, nAdd est un entier sans signe sur 4 octets ) : buffer
+      
+      reste est un entier sans signe sur 4 = nAdd
+      // init d'un buffer de taille multiple de 4
+      nTailleMod4 est un entier = ( taille(bufINT)  modulo 4) // taille en octets
+      bufLocal est un buffer = bufINT
+      SI nTailleMod4<>0 ALORS
+      	bufLocal += Répète(Caract(0),4-nTailleMod4)
+      FIN
+      nTaille est un entier = taille(bufLocal) // taille en octets
+      DWORD_I est un entier sur 4 octets sans signe
+      
+      // parcourt des mots de 4 bits en partant du poids faible
+      POUR i = 1 a nTaille pas 4
+      	bufI4 est un buffer =  bufLocal[ i À i+3]
+      	dbgAssertion(Taille(bufI4) = 4 )
+      	DWORD_I = bufferToUI4LowEndian( bufI4 )
+      	// Multiplication par 58 et ajout du reste
+      	tempMulAdd est un entier sur 8 octets sans signe = DWORD_I * 58 + reste
+      	// calcul et MAJ
+      	DWORD_I = tempMulAdd & 0xFFFFFFFF// PoidsFaible( tempMulAdd, 4) // & 0xFFFFFFFF )// poids faible du résultat
+      	reste   = PoidsFort(   tempMulAdd, 4)
+      	bufLocal[i À i+3] = UI4ToBufferLowEndian(DWORD_I)
+      	dbgAssertion( nTaille  = Taille(bufLocal) )
+      FIN
+      // MAJ résultat OUT
+      RENVOYER bufLocal[1 À  Taille(bufINT) ]
+     type : 458752
+   -
+     name : _diviseBufferPar58
+     procedure_id : 2026509005588485136
+     type_code : 15
+     code : |1+
+      // divise un buffer traité comme un entier long Low Endian par 58
+      // renvoie le reste (=modulo 56)
+      PROCÉDURE  _diviseBufferPar58( data est  un buffer ) : entier
+      
+      DWORD_I est un entier sur 4 octets sans signe
+      v8 est un entier sur 8 octets sans signe
+      c est un entier sur 8 octets sans signe
+      r,q est un entier sur 8 octets sans signe
+      POUR i = Taille(data)-3 a 1 pas -4
+      	// récup valeur couante
+      	bufUI4 est un buffer = data[i À i+3]
+      	DWORD_I = bufferToUI4LowEndian( bufUI4 )
+      	// calul du quotient + retenue poids fort précédent
+      	v8 = DWORD_I + c * 0x100000000
+      	q = v8 /58 
+      	r = v8 - q*58
+      	dbgAssertion(r>=0)		
+      	dbgAssertion(r<0xFFFFFFF)
+      	// MAJ valeur
+      	SI q=0 ALORS
+      		data[i À i+3] = ""
+      	SINON
+      		data[i À i+3] = UI4ToBufferLowEndian(q)
+      	FIN
+      	// MAJ retenue avec le reste
+      	c = r 
+      FIN
+      
+      RENVOYER c
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : COL_SansNom1
+resources :
+ string_res :
+  identifier : 0x1a801717009a161d
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

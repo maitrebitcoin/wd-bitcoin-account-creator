@@ -1,0 +1,160 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : hash256
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1a23ce37035cccf3
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      hash256 est une Classe
+      	// buffer de 32 octets pour contenir un condensat sur 256 bits
+      	m_h est un UUID sur 256
+      	
+      	// Hash de valeur 0.
+      	GLOBAL	
+      		_0 est hash256
+      	
+      FIN
+      
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 1883575804846001395
+     type_code : 27
+     code : |1+
+      // Init a 0
+      PROCEDURE Constructeur()
+     type : 589824
+   -
+     name : Constructeur
+     procedure_id : 1883575804846001395
+     type_code : 27
+     code : |1-
+      // init a partir d'une chaine hexa. ex : "7DD07447C61F57454FDF1481F8C1D921930EC8EB1A17670A2AAED95A002BAD0D"
+      procédure Constructeur( sHexa )
+      fromString(sHexa)
+     type : 589825
+   -
+     name : Destructeur
+     procedure_id : 1883575804846066931
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+     type : 655360
+   -
+     name : calcShaSha
+     procedure_id : 1883576126968688521
+     type_code : 12
+     code : |1+
+      // Init avec sha256( sha256(s) )
+      procédure calcShaSha( s est buffer )
+      
+      m_h = sha2_256(sha2_256(s))
+     type : 458752
+   -
+     name : toString
+     procedure_id : 1883576285882515848
+     type_code : 12
+     code : |1+
+      // renvoyer au format chaine big endian
+      Procédure toString()
+      renvoyer  BufferVersHexaSansEspace(bufferReverseEndian(toBufferLowEndian()))
+     type : 458752
+   -
+     name : fromString
+     procedure_id : 1883614090192146473
+     type_code : 12
+     code : |1+
+      // ex s : "00000000B873E79784647A6C82962C70D228557D24A747EA4D1B8BBE878E1206"
+      PROCÉDURE fromString(s chaine)
+      dbgAssertion(Taille(s) = 64,s)
+      
+      sBuf est buffer = bufferReverseEndian( HexaVersBuffer(s) )
+      fromHashAsBuffer(sBuf)
+      
+     type : 458752
+   -
+     name : fromHashAsBuffer
+     procedure_id : 1883618896263963176
+     type_code : 12
+     code : |1+
+      // init a partir d'un buffer binaire qui contient un h
+      procédure fromHashAsBuffer( local bufferHash est buffer )
+      dbgAssertion(taille(bufferHash) = 256/8)
+      Transfert(&m_h ,  &bufferHash, 32)
+     type : 458752
+   -
+     name : toBufferLowEndian
+     procedure_id : 2056444119840015890
+     type_code : 12
+     code : |1+
+      procédure toBufferLowEndian() : buffer
+      bufferHash est buffer =  Répète(Caract(0),32)
+      Transfert(&bufferHash, &m_h,  32)
+      renvoyer bufferHash
+     type : 458752
+   -
+     name : toBufferBrut
+     procedure_id : 2058315894223669910
+     type_code : 12
+     code : |1-
+      // conf au format brut du réseau bitcoin
+      procédure toBufferBrut() : buffer
+      //renvoyer bufferReverseEndian( toBufferLowEndian() )
+      renvoyer  toBufferLowEndian() 
+     type : 458752
+   -
+     name : bEstZéro
+     procedure_id : 1922221761669208196
+     type_code : 12
+     code : |1+
+      PROCEDURE bEstZéro()
+      renvoyer m_h= ::_0:m_h // Répète(Caract(0),32)
+     type : 458752
+   -
+     name : toDB
+     procedure_id : 1931608567330657769
+     type_code : 12
+     code : |1+
+      // renvoie le hash au format utilisé dans une rubrique de la base hf
+      PROCEDURE toDB() // : uuid sur 256
+      renvoyer m_h
+     type : 458752
+   -
+     name : fromDB
+     procedure_id : 1931749141714223372
+     type_code : 12
+     code : |1+
+      // affecte a partir d'un rubrique hf
+      procédure fromDB( rubrique uuid sur 256 )
+      m_h = rubrique
+     type : 458752
+   -
+     name : toUUID
+     procedure_id : 2055331942431285449
+     type_code : 12
+     code : |1-
+      procédure toUUID()
+      RENVOYER m_h
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1a23ce360359c7f1
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

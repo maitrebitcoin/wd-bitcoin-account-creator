@@ -1,0 +1,782 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : ConstructeurDeTransaction
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1c8cd11e0fd0f2ca
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      
+      
+      //constructeur de transactions bitcoin.
+      // des explications peuvent être trouvée ici 
+      // http://www.righto.com/2014/02/bitcoins-hard-way-using-raw-bitcoin.html
+      // https://bitcoin.org/en/developer-reference#opcodes
+      
+      // Identifie une entrée 
+      STEntree est une Structure
+      	jetonADepénser  est jeton     // Jeton non encore dépense 
+      	signatureScript est un buffer // script avec la signature autorisant la dépense de cette sortie
+      	indice			est entier	  // indice dans la transaction qu'on construir
+      FIN
+      // Identifie une sortie
+      STSortie est une structure
+      	valeur est entier sans signe sur 8 octets // valeur de la sortie en Satoshi
+      	unlockScript est un buffer				 // script de déblocage de la sortie. ex : OP_CHECKSIG
+      fin
+      //// interface pour construite les transactions
+      //ITxUtil est une Interface
+      //	// renvoyer les infos d'un sortie non dépensée de <addr>. 
+      //	// retour: un triplet (txid,indice,valeur)
+      //	Procédure GetUtxoFromAddr( addr btcAddr )
+      //	// renvoyer une adresse pour le change
+      //	procédure GetAddrChange() : btcAddr
+      //FIN
+      
+      ConstructeurDeTransaction est une Classe
+      	// Entrées ; tableau de sorties précédentes non encore dépensées
+      	m_tabEntree est un tableau de STEntree
+      	// Sorties
+      	m_tabSortie est un tableau de STSortie
+      	
+      FIN
+      //// Opcode Bitcoin script dont on a besoin
+      //constant
+      //	OP_DUP 		   = 0x76       
+      //	OP_HASH160     = 0xA9       
+      //	OP_EQUALVERIFY = 0x88       
+      //	OP_CHECKSIG	   = 0xAC
+      //	OP_RETURN	   = 0x6A
+      //	
+      //	SIGHASH_ALL = 1
+      //fin
+      
+      // options pour recevoir la signature dans GetRawTransation
+      EOption est une Enumération
+      	sansSignature 	  = 1 // version sans les infos de signature. pour signature par l'api RPC 
+      	pourHashSignature = 2 // version pour calculer la signature
+      	avecSignature	  = 3 // version incluant la signature des entrées.
+      	avecSignatureVide = 4 // version pour calcul de la taille : la signature des entrées a des clé de la bonne taille, mais a 0
+      FIN
+      
+      constant nDUSTLIMIT = 0 // @a VOIR
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 2057249056846115530
+     type_code : 27
+     code : |1+
+      PROCEDURE Constructeur()
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 2057249056846181066
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+     type : 655360
+   -
+     name : AjouteEntrée
+     procedure_id : 2057249056846246602
+     type_code : 12
+     code : |1-
+      // ajouter une entrée dans la transaction.
+      // augmente la valeur totale transférée
+      //  txid  | id (Hash256 = 32 octets) de la transaction qui a produit cette sortie
+      // indice | indice de la sortie dans la transaction. commence a 0
+      // valeur | valeur  en Satoshi
+      Procédure AjouteEntrée( stIN est STEntree ) 
+      
+      // init entrée sauf la partie signature
+      //stIN est STEntree 
+      //stIN.txid 	= bufTxid
+      //stIN.indice = nIndice
+      //stIN.Valeur = Valeur
+      // ajout entrée
+       TableauAjoute(m_tabEntree, stIN)
+       
+     type : 458752
+   -
+     name : AjouteSortieRaw
+     procedure_id : 2057249056846312138
+     type_code : 12
+     code : |1+
+       // ajout d'une sortie version bas niveau on précisant un script de déblocage des fonds
+       // valeur | valeur en Satoshi
+       procédure AjouteSortieRaw( Valeur entier sur 8, unlockScrypt buffer  )
+      dbgAssertion(Valeur>=0)
+      dbgAssertion(Valeur<=21 000 000 * 100 000 000) // Pas plus que tous les bitcoins
+      
+      // init structure
+      stOUT est STsortie
+      stOUT.valeur	  = Valeur
+      stOUT.UnlockScript= unlockScrypt
+      // ajout sortie
+      TableauAjoute(m_tabSortie, stOUT)
+     type : 458752
+   -
+     name : AjouteSortieVersBtcPubKey
+     procedure_id : 2057249056846377674
+     type_code : 12
+     code : |1+
+      // ajoute une sortie vers un compte bitcoin 
+      // 
+      //  btcPubKey | clé publique d'une adresse d'un compte bitcoin, doit faire 160 bits = 20 octets
+      procédure AjouteSortieVersBtcPubKey( Valeur entier sur 8, btcDest Adresse)
+      dbgAssertion(  Valeur >= 0)
+      dbgAssertion(taille(btcDest.sRaw160bit() ) = 20)
+      
+      // script a générer :
+      // (pay-to-pubkey-hash)
+      // OP_DUP 			 // dupliquer la valeur en haut de la pile = PK
+      // OP_HASH160 		 // calculer HPK = ripemd160( sha256( shas256( PK ) )
+      // PUSH <Adresse160> 
+      // OP_EQUALVERIFY    // vérifier que HP1 = Adresse160, sinon toute la transaction est invalide
+      // OP_CHECKSIG		 // verifier  la signature de la transaction pour la clé publique PK + signature
+      binscript est un buffer = Script.sGenere_PaieAddr( btcDest )
+      
+      AjouteSortieRaw( Valeur, binscript )
+      
+     type : 458752
+   -
+     name : sGetJsonTransaction
+     procedure_id : 2057249056846443210
+     type_code : 12
+     code : |1+
+      // renvoie la transaction construite au format Json
+      procédure sGetJsonTransaction() : chaîne
+      
+      sResult est chaine
+      // ----  entrée
+      
+      s1EntreeModele est chaine = [
+      	{
+      		"txid":"%1",
+      		"vout": %2
+      	}
+      ]
+      sAllEntree est chaîne 
+      POUR TOUT stEntree DE m_tabEntree
+      
+      	s1EntreeI est chaine
+      	// /!\ txid renversé.
+      	//s1EntreeI = ChaîneConstruit(s1EntreeModele,  BufferVersHexaSansEspace( bufferReverseEndian(stEntree.jetonADepénser.ID.hashTxSortie.m_h )), stEntree.jetonADepénser.Id.index )
+      	s1EntreeI = ChaîneConstruit(s1EntreeModele,  stEntree.jetonADepénser.ID.hashTxSortie.toString(), stEntree.jetonADepénser.Id.index )
+      	si sAllEntree<>"" ALORS
+      		sAllEntree += "," + RC 
+      	FIN
+      	sAllEntree +=  s1EntreeI
+      FIN
+      sVinModele est chaine = [
+      	"vin": [ %1 ]
+      ]
+      sVin est chaine = ChaîneConstruit(sVinModele,sAllEntree)
+      
+      /// -- sorties
+      
+      s1sortieModele est chaine = [
+      	{
+      		"value": %1,
+      		"n": %2,
+      		"scriptPubKey":
+      		{
+      			"hex":"%3"
+      		}
+      	}
+      ]
+      
+      sAllSortie est chaîne 
+      nNumSortie est entier
+      POUR TOUT stSortie DE m_tabSortie
+      	// calcul params
+      	rvalBtc est un réel = stSortie.valeur / 100 000 000.0; // convertion Satoshi => Btc
+      	scriptHex est chaine = BufferVersHexaSansEspace(stSortie.UnlockScript)
+      	
+      	s1SortieI est chaine
+      	s1SortieI = ChaîneConstruit(s1sortieModele,  	rvalBtc, nNumSortie, scriptHex )
+      	SI sAllSortie<>"" ALORS
+      		sAllSortie += "," + RC 
+      	FIN
+      	sAllSortie +=  s1SortieI
+      	nNumSortie++
+      FIN
+      sVoutModele est chaine = [
+      	"vout": [ %1 ]
+      ]
+      sVout est chaine =  ChaîneConstruit(sVoutModele,sAllSortie)
+      
+      // construit le résultat final
+      sResultModele est chaine = [
+      	{
+      		"version":2,
+      		"locktime":0,
+      		%1,
+      		%2
+      	}
+      ]
+      
+      sResult =   ChaîneConstruit(sResultModele, sVin, sVout )
+      
+      renvoyer sResult
+     type : 458752
+   -
+     name : ContruitEcritDonneePerso
+     procedure_id : 2057249056846508746
+     type_code : 12
+     code : |1+
+      // construire une transaction qui écrit une donnée perso
+      // <data>  données a écrire  (max 75 octets)
+      procédure ContruitEcritDonneePerso( data est buffer,...
+      									frais TarifTransaction, piIntef ICompteBitcoin ,  regle est consensus )
+      dbgAssertion(piIntef<>null)
+      
+      // récup d'un jeton assez gros pour payer les frais
+      destChange est Adresse = piIntef.GetAddrChange() //@A voir
+      stTabIN est un tableau de STEntree
+      si pas _GetTabEntréePourDépense(destChange, piIntef, regle, 0, frais, stTabIN) ALORS
+      	// erreur 
+      	dbgAssertion(Faux,"fonds insuffisants")
+      	retour
+      FIN
+      // calcul valeur totale des entrées
+      nValeurTotaleEntrée est un entier sur 8 octets
+      POUR TOUT stIN de stTabIN
+      	nValeurTotaleEntrée += stIN.jetonADepénser.montant.enSatoshi()
+      FIN
+      
+      // ajoute les  entrées de la transaction
+      POUR TOUT stIN de stTabIN
+      	AjouteEntrée(stIN )
+      fin
+      
+      // Ajout <destAddr> comme dest
+      AjouteSortieVersRawData( data )
+      
+      
+      
+      // ajout de l'adresse pour récupérer la monnaie
+      nTailleTotaleTx est un entier = 500 // au pif
+      change est entier sur 8 = nValeurTotaleEntrée - frais.GetFrais( nTailleTotaleTx ).enSatoshi()
+      dbgActiveAssertion(change>=0)
+      // si il reste de la monnaie
+      si change>0 alors
+      	// on récupère la monnaie
+      	//destChange est btcAddr = piIntef.GetAddrChange()
+      	AjouteSortieVersBtcPubKey(change,destChange)
+      fin
+      
+     type : 458752
+   -
+     name : GetRawTransaction
+     procedure_id : 2057249056846574282
+     type_code : 12
+     code : |1+
+      // renvoie la transaction au format binaire (raw)
+      // <nOption> : btcTransactionBuilder::sansSignature par ex
+      // <nNumEntree> : n° de l'entrée qu'on voudra signer si <nOption> = sansSignature
+      procédure GetRawTransaction( nOption EOption, nNumEntree entier = 0 ) : buffer
+      
+      // format binaire d'une transaction 
+      //	4:	version			:int32			 :Transaction data format version (note, this is signed)
+      //	?:	tx_in_count		:var_int		 :Number of Transaction inputs (never zero)
+      //	?:	tx_in			:tx_in[]		 :A list of 1 or more transaction inputs or sources for coins
+      //	?:	tx_out_count	:var_int		 :Number of Transaction outputs
+      //	?:	tx_out			:tx_out[]		 :A list of 1 or more transaction outputs or destinations for coins
+      //	4:	lock_time		:uint32		 	:The block number or timestamp at which this transaction is unlocked:
+      
+      resultat est un buffer
+      
+      resultat += UI4ToBufferLowEndian( 1 ) // version = 1
+      // ----  entrées
+      resultat += sVariableLengthI8ToBuffer( m_tabEntree.Occurrence() ) // 	tx_in_count
+      POUR TOUT st1Entree DE m_tabEntree
+      	tx_in est un buffer = _GetRawTxIN( st1Entree, nOption, nNumEntree )
+      	resultat += tx_in
+      FIN
+      // --- sorties
+      resultat += sVariableLengthI8ToBuffer( m_tabSortie.Occurrence() ) // 	tx_in_count
+      POUR TOUT st1Sortie DE m_tabSortie
+      	tx_out est un buffer = _GetRawTxOUT( st1Sortie )
+      	resultat += tx_out
+      fin
+      resultat += UI4ToBufferLowEndian( 0 ) // 4:	lock_time		:uint32	
+      si nOption= pourHashSignature ALORS
+      	//hash code type
+      	resultat += UI4ToBufferLowEndian(  SIGHASH_ALL )
+      FIN
+      
+      renvoyer resultat
+     type : 458752
+   -
+     name : _GetRawTxIN
+     procedure_id : 2057249056846639818
+     type_code : 12
+     code : |1+
+      // renvoie une entrée de transaction au format binaire brut
+      // <nOption> option de format. ex pourHashSignature
+      procédure _GetRawTxIN( st1Entree est stEntree, nOption est EOption, nPourEntreeNum est entier ) : buffer
+      // format binaire
+      //	32:	hash	:hash	:The hash of the referenced transaction.
+      //	4:	index	:uint32:The index of the specific output in the transaction. The first output is 0, etc
+      //	?:script_length	 :	var_int				:The length of the signature script
+      //	?:signature_script:	uchar[script_length]	:Computational Script for confirming transaction authorization
+      //	4:sequence			:	uint32					:Transaction version as defined by the sender. Intended for "replacement" of transactions when information is updated before inclusion into a block.
+      //]
+      
+      resultat est un buffer
+      resultat +=  st1Entree.jetonADepénser.ID.hashTxSortie.toBufferLowEndian()
+      resultat +=  UI4ToBufferLowEndian( st1Entree.jetonADepénser.ID.index  )
+      SI nOption = pourHashSignature ALORS
+      	// voir 
+      	//https://bitcoin.stackexchange.com/questions/3374/how-to-redeem-a-basic-tx
+      	scriptPubKey est un buffer = st1Entree.jetonADepénser.scriptVerrou
+      	dbgAssertion(scriptPubKey<>"")
+      	// si ce n'est pas l'entrée pour laquelle on veut signer, on doit mettre "" comme script.
+      	// voir https://bitcoin.stackexchange.com/questions/41209/how-to-sign-a-transaction-with-multiple-inputs
+      	si nPourEntreeNum<>st1Entree.indice ALORS
+      		scriptPubKey = "" //rien
+      	FIN
+      	
+      	// 5 Now comes the scriptSig. For the purpose of signing the transaction,
+      	//     this is temporarily filled with the scriptPubKey of the output we want to redeem.
+      	////    First we write a one-byte varint which denotes the length of the scriptSig (0x19 = 25 bytes): 19
+      	resultat += sVariableLengthI8ToBuffer( taille(scriptPubKey) )
+      	// 6 Then we write the temporary scriptSig which, 
+      	// /  again, is the scriptPubKey of the output we want to redeem: 76a914010966776006953d5567439e5e39f86a0d273bee88ac
+      	resultat += scriptPubKey 
+      
+      sinon
+      	// Ajout du script de signature qui autorise la dépense
+      	dbgAssertion(st1Entree.signatureScript<>"")
+      	resultat += sVariableLengthI8ToBuffer( taille(st1Entree.signatureScript) )
+      	resultat += st1Entree.signatureScript
+      
+      fin
+      
+      // sequence
+      resultat += UI4ToBufferLowEndian( 0xFFFFFFFF )
+      
+      
+      
+      
+      renvoyer resultat
+     type : 458752
+   -
+     name : _GetRawTxOUT
+     procedure_id : 2057249056846705354
+     type_code : 12
+     code : |1+
+      // renvoie une sortie de transaction au format binaire (rax)
+      Procédure _GetRawTxOUT( st1Sortie STSortie ) : buffer
+      
+      // format binaire d'une sortie :
+      //	8 :value				:int64	  					:Transaction Value
+      //	? :pk_script_length		:var_int 					:Length of the pk_script
+      //	? :pk_script			:uchar[pk_script_length] 	:Usually contains the public key as a Bitcoin script setting up conditions to claim this output.
+      
+      resultat est un buffer
+      resultat += UI8TobufferLowEndian(st1Sortie.valeur )
+      resultat += sVariableLengthI8ToBuffer( Taille(st1Sortie.UnlockScript) )
+      resultat += st1Sortie.UnlockScript
+      renvoyer resultat
+      
+      
+     type : 458752
+   -
+     name : AjouteSortieVersRawData
+     procedure_id : 2057249056846770890
+     type_code : 12
+     code : |1+
+      // ajoute une sortie vers une donnée perso
+      // cette sortie ne pourra pas être dépensée, mais <sRaw> sera enregistré a jamais.
+      procédure AjouteSortieVersRawData( sRaw est un buffer )
+      
+      dbgAssertion(taille(sRaw) <= 75)
+      
+      // script a générer :
+      
+      // OP_RETURN			 
+      // PUSH <taille data> 
+      // data
+      
+      binscript est un buffer
+      binscript += caract(OP_RETURN)
+      binscript += Caract(taille(sRaw))  	 // PUSH xxx, pour aider les décodeurs de sript a décoder la suite
+      binscript += sRaw
+      
+      Valeur est entier sur 8 = 0
+      AjouteSortieRaw( Valeur, binscript )
+      
+     type : 458752
+   -
+     name : ContruitPaiementSimple
+     procedure_id : 2057249056846836426
+     type_code : 12
+     code : |1+
+      // construire une transaction qui envoie <montant> satoshi vers <destAddr>
+      // <sourceAddr> clé publique bitcoin au format binaire 160 bits
+      procédure ContruitPaiementSimple( destAddr Adresse, regle est consensus, local montant entier sur 8, ...
+      								  tarif TarifTransaction, piIntef ICompteBitcoin  )
+      dbgAssertion(montant>0)
+      dbgAssertion(piIntef<>null)
+      
+      
+      // récup d'un tableau de jeton assez gros pour payer les frais et le montant
+      // >>> algortihme de "coin selection" ici
+      stTabIN est un tableau de STEntree
+      SI PAS _GetTabEntréePourDépense(destAddr, piIntef, regle, montant, tarif, stTabIN) ALORS
+      	// erreur 
+      	RETOUR
+      FIN
+      // calcul valeur totale des entrées
+      nValeurTotaleEntrée est un entier sur 8 octets
+      POUR TOUT stIN de stTabIN
+      	nValeurTotaleEntrée += stIN.jetonADepénser.montant.enSatoshi()
+      FIN
+      
+      // ajoute les  entrées de la transaction
+      POUR TOUT stIN de stTabIN
+      	// ajoute <stIn> comme entrée de la transaction + signature avec un buffer de 0 pour calcul frais OK
+      	stIN.signatureScript = Répète(Caract(0), piIntef.tailleSignaturePourJeton(stIN.jetonADepénser))
+      	AjouteEntrée(stIN )
+      FIN
+      
+      // calcul de la taille de la transaction avec les entrées déja calculée et 2 sorties (cas pire)
+      destChange est Adresse = piIntef.GetAddrChange()
+      tailleTransaction est entier = _nGetTailleSample( stTabIN..Occurrence, [ destAddr, destChange ], piIntef,stTabIN[1].jetonADepénser)
+      dbgAssertion( tailleTransaction >=  taille( GetRawTransaction( avecSignature )) )
+      // on en déduis la monnaie a récupérer
+      change est entier sur 8 =  nValeurTotaleEntrée - montant - tarif.GetFrais(tailleTransaction).EnSatoshi()
+      // regarde si on devra ajouter +1 entre pour le change
+      bAjouteSortieChange est un booléen
+      SI change>nDUSTLIMIT ALORS
+      //	// on récupère la monnaie a l'adresse < destChange >
+      //	destChange est btcAddr = piIntef.GetAddrChange()
+      //	nTailleChange est un entier = _nGetTaille1Sortie(destChange)
+      //	// si ca vaut le coup (ie la monnaie qu'on récupère a une valeur suffisante )
+      //	si change >  tarif.GetFrais(tailleTransaction).EnSatoshi() + nDUSTLIMIT ALORS
+      	bAjouteSortieChange = Vrai
+      sinon
+      	// recalcul du change avec un taille de tx a 1 seule sortie
+      	tailleTransaction = _nGetTailleSample( stTabIN..Occurrence, [ destAddr ], piIntef,stTabIN[1].jetonADepénser)
+      	change  =  nValeurTotaleEntrée - montant - tarif.GetFrais(tailleTransaction).EnSatoshi()
+      	dbgActiveAssertion(change>=0)
+      	//fin
+      FIN
+      
+      // Ajout <destAddr> comme dest
+      montantSortie est entier sur 8 = montant
+      si tarif.m_bPayéParLeDestinaire ALORS
+      	frais est btcMontant = tarif.GetFrais( tailleTransaction  )
+      	montantSortie -= frais.enSatoshi()
+      FIN
+      // Ajout d'une sortie de <montantSortie> vers le destinataire
+      AjouteSortieVersBtcPubKey(montantSortie, destAddr)
+      
+      // Ajout de l'adresse pour récupérer la monnaie
+      dbgActiveAssertion(change>=0)
+      // si il reste de la monnaie
+      si bAjouteSortieChange alors
+      	// on récupère la monnaie
+      	//destChange est btcAddr = piIntef.GetAddrChange()
+      	dbgAssertion(pas destChange.bEstvide())
+      	AjouteSortieVersBtcPubKey(change,destChange)
+      fin
+     type : 458752
+   -
+     name : _GetTabJetonOkDépense
+     procedure_id : 2057249056846901962
+     type_code : 12
+     code : |1-
+      // récup d'un tableau de jeton valides pour une dépense
+      procédure _GetTabJetonOkDépense( piIntef est ICompteBitcoin, regles est Consensus  ) //: (tableau, chaine)
+      //Valeur de retour
+      tabJeton_OUT est tableau de jeton 
+      sErreur_OUT  est chaine
+      
+      RefSurtabJeton est un tableau de jeton <- tabJeton_OUT // @contourne une erreur de compil
+      RefSurregles est Consensus <-  regles // @contourne une erreur de compil
+      
+      	PROCÉDURE INTERNE fVisiteUtxo( jetonI est jeton ) 
+      		dbgAssertion( jetonI.scriptVerrou <>"" )
+      		// si le jeton peut être dépense 
+      		SI  RefSurregles.bJetonPeutEtreDépense( jetonI, sErreur_OUT )
+      			// ajout au tableua des jetons OK
+      			RefSurtabJeton .Ajoute( jetonI )
+      		FIN
+      		renvoyer vrai // jeton suivant
+      	FIN
+      
+      // parcours des jetons du portefeuille
+      f est une procédure = fVisiteUtxo // @contourne une erreur de compil
+      piIntef.visiteUtxo( f )
+      
+      renvoyer (tabJeton_OUT, sErreur_OUT )
+     type : 458752
+   -
+     name : _GetTabEntréePourDépense
+     procedure_id : 2057249056846967498
+     type_code : 12
+     code : |1-
+      // renvoie un triplet avec txid, indice, montant 
+      // qui représente un utx avec au moins montantMin dispo.
+      PROCÉDURE _GetTabEntréePourDépense(  destDépense est Adresse, piIntef est ICompteBitcoin,  regle est consensus, local montantMin entier sur 8, frais TarifTransaction , res_OUT tableau de STEntree ) : booléen
+      
+      // récup d'un tableau des jetons désensables
+      tabJeton est un tableau de jeton
+      sErreur est chaine
+      (tabJeton, sErreur) =  _GetTabJetonOkDépense(piIntef,regle)
+      // si rien
+      SI tabJeton.Occurrence() = 0 ALORS
+      	si sErreur="" alors
+      		sErreur= <§$0000§>
+      	FIN
+      	ErreurDéclenche( ERR_BITCOIN_NOTENOUGHTBTC ,sErreur)
+      	RENVOYER Faux
+      FIN
+      
+      // prends le 1er jeton comme exemple pour calcul de taille
+      // fait l’hypothèse que tous les jetons du portefeuille sont aux meme format
+      jSample est jeton = tabJeton[1]
+      // récup tailles avec 0 entrée et taille ajoutée par chaque entrée
+      destChange est Adresse = piIntef.GetAddrChange()
+      nTailleTxSansEntree est un entier = _nGetTailleSample(0, [destDépense,destChange], piIntef,jSample) // sans entrées
+      nTaille1Entree		est un entier = _nGetTaille1Entree(piIntef, jSample)
+      
+      
+      // tri par valeur, le max au début
+      tabJeton.Trie(ttFonction, _cmpJetonParValeur)
+      	Procédure interne _cmpJetonParValeur( j1 jeton, j2 jeton) : entier
+      		renvoyer j1.montant.nCompareValeur( j2.montant )
+      	fin
+      
+      //calcul du montant total a dépenser
+      montantMinAvecFrais est un entier sur 8 octets = montantMin 
+      si pas frais.m_bPayéParLeDestinaire alors // cas par défaut
+      	montantMinAvecFrais += frais.GetFrais(nTailleTxSansEntree).EnSatoshi()
+      fin
+      
+      nTotal est un entier sur 8 octets
+      // on rempli le tableau jusqu’à arriver au moins au montant demandé
+      POUR TOUT jetonI DE tabJeton
+      	// valeur utilisable du jeton : sa valeur - les fais en plus a payer pour le dépenser
+      	nValeurBruteJeton est un entier sur 8 octets = jetonI.montant.enSatoshi() 
+      	nValeurNetteJeton est un entier sur 8 octets = nValeurBruteJeton
+      	nValeurNetteJeton -=  frais.GetFrais(nTaille1Entree).EnSatoshi() // cout en augmentation de la taille de la tx.
+      	// on n'ajoute pas de jetons si ca coûte de l'agent. cas ou les frais sont élevés et le jeton a un valeur faible
+      	si nValeurNetteJeton<0 ALORS
+      		// si on veut que le destinataire paye les frais, et qu'on en est a accumuler les poussières
+      		// on lève une erreur pour ne pas réduire la somme envoyée.
+      		si frais.m_bPayéParLeDestinaire ALORS
+      			ErreurDéclenche( ERR_BITCOIN_NOTENOUGHTBTC, "Le frais sont plus important que la valeurs des jetons")
+      			renvoyer faux
+      		FIN
+      		continue
+      	FIN
+      	
+      	// ajout du jeton dans le tableau des entrées
+      	stEntreeI est STEntree
+      	stEntreeI.jetonADepénser = jetonI
+      	stEntreeI.indice		 = res_OUT.Occurrence() +1
+      	res_OUT.Ajoute(stEntreeI)
+      
+      	// calcul nouvelle valeur totales nette des entrées 
+      	si frais.m_bPayéParLeDestinaire
+      		nTotal += nValeurBruteJeton 
+      	sinon
+      		nTotal += nValeurNetteJeton 
+      	fin
+      	si nTotal>= montantMinAvecFrais ALORS
+      		// terminé
+      		RENVOYER vrai
+      	FIN
+      	
+      FIN
+      
+      
+      
+      
+      // pas assez de fonds
+      ErreurDéclenche( ERR_BITCOIN_NOTENOUGHTBTC,"Fond Insuffisants. max disponible = " + nTotal)
+      RENVOYER faux
+      
+      //// rech. dans
+      //soit TabUtxo = BitcoinJsonRpcApi.listunspent()
+      //POUR TOUT utxo DE TabUtxo
+      //	saddr est chaine = utxo.address
+      //	montantUtxo est entier = utxo.amount * 100 000 000.0
+      //	SI montantUtxo>=montantMin ALORS
+      //		// trouvé
+      //		bufUtxoID est un buffer = HexaVersBuffer(utxo.txid)
+      //		RENVOYER ( bufUtxoID, utxo.vout,  montantUtxo )
+      //		
+      //	FIN
+      
+      // ajoute sa signature a une entrée
+     type : 458752
+   -
+     name : _signe1Entree
+     procedure_id : 2057249056847033034
+     type_code : 12
+     code : |1+
+      Procédure _signe1Entree(iCompte est ICompteBitcoin, stInput est STEntree, bPourEvalTailleUniquement est un booléen)
+      
+      
+      
+      sigatureDER est un buffer //  signature encodée au format DER
+      pubKey est un buffer      // clé publique au format x,y 
+      SI bPourEvalTailleUniquement ALORS
+      	sigatureDER = Répète(Caract(0), 0x46 ) //  0x46 = Taille encodage DER 2 entiers sur 256
+      	pubKey		= Répète(Caract(0), iCompte.tailleSignaturePourJeton( stInput.jetonADepénser ) )
+      SINON
+      	rawTransactionForSign est un buffer = GetRawTransaction( pourHashSignature, stInput.indice )
+      	// récup buffer signature au format DER
+      	(sigatureDER, pubKey) = iCompte.signePourJeton( rawTransactionForSign, stInput.jetonADepénser )
+      	// si échec de la signature
+      	SI sigatureDER="" ALORS
+      		ErreurDéclenche(ERR_BITCOIN_SIGNATURE,"Echec de signature")
+      		RETOUR
+      	FIN
+      FIN
+      
+      dbgAssertion(Taille(sigatureDER) = 0x46)
+      dbgAssertion(Taille(pubKey) = 0x40 OU Taille(pubKey) = 0x21)
+      // crée le script de validation de paiement
+      // il sera concaténé avec le script public et exécuté, le résultat doit être  1 pour autoriser la dépense
+      scriptSig est un buffer 
+      
+      
+      scriptSig +=  Caract( 0x47 ) // PUSHDATA_47
+      scriptSig +=  sigatureDER +  Caract( SIGHASH_ALL ) 
+      scriptSig +=  Caract( Taille(pubKey)  ) // PUSHDATA_41
+      //	 scriptSig +=  Caract( 0x04 ) // type
+      
+      scriptSig +=  pubKey
+      
+      
+      stInput.signatureScript = scriptSig
+     type : 458752
+   -
+     name : ajouteSignature
+     procedure_id : 2057249056847098570
+     type_code : 12
+     code : |1+
+      // ajouter les signature dans le tableau des entrée .
+      procédure ajouteSignature( iCompte est ICompteBitcoin )
+      dbgAssertion(iCompte<>null)
+      nNumEntrée est un entier = 1
+      
+      // créé la signature pour chaque entrée
+      POUR TOUT stInput DE m_tabEntree
+      	si stInput.jetonADepénser.addr.bEstvide() ALORS
+      		dbgAssertion(faux)
+      		retour
+      	FIN
+      	/// ajouter sa signature a l'entée
+      	_signe1Entree(iCompte,stInput, faux)
+      	
+      	 
+      FIN
+     type : 458752
+   -
+     name : _nGetTailleSample
+     procedure_id : 2057249056847164106
+     type_code : 12
+     code : |1+
+      procédure _nGetTailleSample(nNbEntree entier, TabSortie est tableau de Adresse, portefeuille est ICompteBitcoin, j jeton) : entier
+      
+      // contruit 1 tx exemple
+      clTx est ConstructeurDeTransaction
+      //btcDestExemple est btcAddr
+      //btcDestExemple.bInitFromBase58(j.addr.sBase58())//  "STdTVs8iCCamGpJousqKZhhK5pnJP4pu5o") // adresse simnet exemple
+      //btcDestExemple = j.addr 
+      //clTx.AjouteSortieVersBtcPubKey(0,btcDestExemple) // payement
+      //clTx.AjouteSortieVersBtcPubKey(0,btcDestExemple) // change
+      // ajout d'entrées
+      pour i=1 a nNbEntree
+      	stInExemple est STEntree
+      	stInExemple.indice 		   = i
+      	stInExemple.jetonADepénser = j
+      	// +signature vide pour avoir la taille
+      	clTx._signe1Entree ( portefeuille, stInExemple, Vrai )
+      	// ajout
+      	clTx.AjouteEntrée(stInExemple)
+      
+      FIN
+      // ajout de sorties
+      nNbSortie est entier = TabSortie.Occurrence()
+      pour i=1 a nNbSortie
+      	clTx.AjouteSortieVersBtcPubKey(0, TabSortie[i])//"STdTVs8iCCamGpJousqKZhhK5pnJP4pu5o")
+      FIN
+      //clTxUtil est ICompteBitcoin //= null// CIICompteBitcoin
+      
+      
+      // récup 1 tx
+      bufBrut est un buffer= clTx.GetRawTransaction(avecSignature)
+      
+      nRes est un entier = taille(bufBrut)
+      renvoyer nRes
+     type : 458752
+   -
+     name : _nGetTaille1Entree
+     procedure_id : 2057249056847229642
+     type_code : 12
+     code : |1+
+      procédure _nGetTaille1Entree(portefeuille est ICompteBitcoin, j jeton) : entier
+      
+      nRes est un entier = _nGetTailleSample(1,[], portefeuille,j)- _nGetTailleSample(0, [], portefeuille, j)
+      renvoyer nRes
+     type : 458752
+   -
+     name : _nGetTaille1Sortie
+     procedure_id : 2057249056847295178
+     type_code : 12
+     code : |1-
+      procédure _nGetTaille1Sortie( addresseDest est Adresse  ) : entier
+      
+      // construit un script temp local
+      scriptValidePayement est un Buffer = Script.sGenere_PaieAddr( addresseDest )
+      // init structure
+      sortieTempLocale est STsortie
+      sortieTempLocale.valeur	     = 0
+      sortieTempLocale.unlockScript= scriptValidePayement
+      
+      tx_out est un buffer = _GetRawTxOUT( sortieTempLocale )
+      renvoyer taille(tx_out )	
+      	
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+resources :
+ string_res :
+  identifier : 0x1a7f18510025e8ac
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+  strings :
+   -
+     text :
+      fr-FR : aucun fond disponible
+      en-GB : aucun fond disponible
+      es-ES : aucun fond disponible
+      ar-SA : aucun fond disponible
+     index : 0
+   -
+     text :
+      fr-FR : fonds insuffisants
+      en-GB : fonds insuffisants
+      es-ES : fonds insuffisants
+      ar-SA : fonds insuffisants
+     index : 1
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

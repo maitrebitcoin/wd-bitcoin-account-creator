@@ -1,0 +1,23 @@
+
+/cache.gestion de sources
+/Donn�es des tests automatiques
+/Exe
+/Historique
+/Sauvegarde
+/Corbeille
+/Gabarits
+/Svg_*
+/*.cpl
+
+*.DLL
+*.exe
+*.cpl
+*.wxres
+*.wdcoverage
+*.cache
+*.WPF
+*.waudit
+*.env
+desktop.ini
+HstDuree.log
+Folder.ico

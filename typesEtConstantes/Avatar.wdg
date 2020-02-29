@@ -1,0 +1,65 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : Avatar
+ major_version : 25
+ minor_version : 0
+ type : 7
+ description : ""
+ subtype : 0
+procedure_set :
+ identifier : 0x1af1a317022dfba4
+ internal_properties : BQAAAAUAAABGLu41kG7fjQV3iS4F72qmnKaNh5694reolNKIW0iw
+ code_elements :
+  type_code : 31
+  p_codes : []
+  procedures :
+   -
+     name : creeImageAvatarRobot
+     procedure_id : 1941512375323688561
+     type_code : 15
+     code : |1+
+      PROCEDURE creeImageAvatarRobot( addr est un hash256, tailleEnPx entier ) : Image
+      
+      avatar est une Image
+      url est chaine = "https://robohash.org/" +  addr.toString()  +".png?size=" + tailleEnPx + "x" + tailleEnPx
+      si HTTPRequête(url) alors
+      	res est un buffer  = HTTPDonneRésultat(httpRésultat)
+      	avatar = res
+      FIN
+      
+      
+      ////grCrée("GR",grDonut,faux)
+      //dDébutDessin(avatar,dAvecOpacité)
+      //
+      //dAngle est un réél = 0
+      //pour i = 1 a 4
+      //	val est un entier
+      //	parBuf est un buffer = Milieu(addr.m_h,i*4,4)
+      //	bufPourTaillee est un buffer = Milieu(parBuf,1,2)
+      //	//bufPourCouleur est un buffer = Milieu(parBuf,2,3)
+      //	tailleSecteur est entier  = bufferToUI2LowEndian(bufPourTaillee)
+      //	coul est entier = bufferToUI4LowEndian(parBuf)
+      //	//Transfert(val, )
+      //	//grA
+      //	//grAjouteDonnée("GR",i,1, tailleSecteur)
+      //	//grCouleur("GR",grCouleurAxeRelief)
+      //	//dPortion(0,0,400,400,40,10,0)
+      //FIN
+      
+      
+      
+      renvoyer avatar
+      
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : ProcéduresGlobales1
+resources :
+ string_res :
+  identifier : 0x1af1a312022be751
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

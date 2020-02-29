@@ -1,0 +1,88 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : TarifTransaction
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1b3736692b870013
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      TarifTransaction est une Classe
+      	m_bFixe 			   est un booléen
+      	m_FraisFixe 		   est btcMontant
+      	m_FraisParOctet		   est un réel 
+      	m_bPayéParLeDestinaire est un booléen // si vrai on le frais sont a prélever a la somme envoyée
+      	
+      	global
+      		tarifParDéfaut est TarifTransaction
+      FIN
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 1961095988072939539
+     type_code : 27
+     code : |1+
+      PROCEDURE Constructeur()
+      
+      m_bFixe			= faux
+      m_FraisParOctet = 1 // min
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 1961095988073005075
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+     type : 655360
+   -
+     name : GetFrais
+     procedure_id : 1961095988073070611
+     type_code : 12
+     code : |1+
+      procédure GetFrais( tailleTransaction entier ) : btcMontant
+      
+      frais est btcMontant
+      si m_bFixe ALORS
+      	renvoyer m_FraisFixe
+      sinon
+      	frais.SetEnSatoshi( tailleTransaction * m_FraisParOctet )
+      	renvoyer frais
+      FIN
+      
+     type : 458752
+   -
+     name : VersChaine
+     procedure_id : 1961095988073136147
+     type_code : 12
+     code : |1-
+      Procédure VersChaine() : chaine
+      
+      sRes est chaine
+      SI m_bFixe ALORS
+      	sRes  = m_FraisFixe.VersChaine()
+      SINON
+      	sRes  = "" + m_FraisParOctet + " sat./octet"
+      fin
+      
+      renvoyer sRes
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1b33216c006117a1
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

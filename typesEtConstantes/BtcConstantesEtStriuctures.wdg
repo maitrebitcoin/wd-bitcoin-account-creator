@@ -1,0 +1,165 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : BtcConstantesEtStriuctures
+ major_version : 25
+ minor_version : 0
+ type : 7
+ description : ""
+ subtype : 0
+procedure_set :
+ identifier : 0x1a83e58702146efa
+ internal_properties : BQAAAAUAAABGLu41kG7fjQV3iS4F72qmnKaNh5694reolNKIW0iw
+ code_elements :
+  type_code : 31
+  p_codes :
+   -
+     code : |1-
+      
+      // ---- Constantes et structure publiques ----
+      
+      // types de réseau 
+      BtcNetwork est une énumération
+      	BtcNet_Inconnu  = 0 // erreur/réseau non déteerminé
+      	BtcNet_Main     = 1  // reséau principal, avec du vrai argent.
+      	BtcNet_Test     = 2  // réseau de test, les tokens n'ont aucune valeur
+      	BtcNet_Simu     = 3  // réseau local simulé,  les tokensn'ont aucune valeur. btcd uniquement
+      	BtcNet_TestAuto = 4  // réseau local simulé pour Tests auto / non régression
+      fin
+      
+      //CONSTANT
+      //	BtcNet_Inconnu = 0  // erreur/réseau non déteerminé
+      //	BtcNet_Main = 1  // reséau principal, avec du vrai argent.
+      //	BtcNet_Test = 2  // réseau de test, les tokens n'ont aucune valeur
+      //	BtcNet_Simu = 3  // réseau local simulé,  les tokensn'ont aucune valeur. btcd uniquement
+      //	
+      //FIN
+      
+      // Interface représentant les fonctions de base pour gérer un ou des compte bitcoin
+      // permet de d'utiliser une noeud complet + jsonRpc ou une implémentation locale + simple verification wallet
+      
+      constant
+      	OptionSolde_Disponible_DansBloc	= 0 // ne tiens compte que des transactions au moins dans 1 bloc
+      	OptionSolde_0Conf  	   			= 1 // solde recu et valide + solde  pas encore dans un bloc. non dépensable
+      	OptionSolde_EnAttenteReception  = 2 // solde en attente de validation dans un bloc. non dépensable
+      	OptionSolde_EnAttenteEnvoi      = 3 // montant envoyé; en attente de validation dans un bloc. non désensable
+      
+      fin
+      
+      ICompteBitcoin est une Interface
+      	// renvoie le solde du compte
+      	// option : = OptionSolde_Disponible ou OptionSolde_0Conf
+      	Procédure GetSolde( option entier  ) : btcMontant
+      	//--pour construite les transactions 
+      	// visiter les sortis non dépensée 
+      	// proto de fVisite : fvisiteur( clJeton est jeton )
+      	Procédure visiteUtxo( fvisiteur procédure )
+      	// renvoyer une adresse pour le change
+      	Procédure GetAddrChange() : Adresse
+      	// signer renvoyer la signature au format DER d'un entre pour signer une transaction.
+      	Procédure signePourJeton( newTxRw buffer, j est jeton ) : (buffer,buffer)
+      	// renvoie la taille en octet de la signature via signePourJeton()
+      	Procédure tailleSignaturePourJeton(  j est jeton ) : (entier)
+      FIN
+      
+      // interface pour accéder au infos du réseau Bitcoin
+      INetworkAccess est une Interface
+      	// renvoie la hauteur max courante de la blockchain. le plus haut bloc connu
+      	Procédure ina_getMaxBlockHeight( hashMaxBlocConnu hash256, hauteur entier ) : entier
+      	// renvoie l'id d'un bloc selon sa hauteur dans la chaine. 0 = genesys.
+      	Procédure ina_getBlockIdFromHeight( height entier ) : hash256
+      	// récup d'un header de bloc au format raw par hash
+      	//Procédure ina_getRawBlockHeaderFromId( blockId hash256  ) : buffer
+      	// récup d'un tableau des id de transaction dans le mempool
+      	procédure ina_getTabTransactionIdMemPool() : tableau de hash256
+      	// récup d'un transaction du mempool par hash
+      	Procédure ina_getTransactionMemPoolFromId( transactionId hash256  ) : bitcoinTransaction
+      	// récup d'un bloc par hash 
+      	//Procédure ina_getBlockFromId( blockId hash256  ) : BlockComplet
+      	
+      FIN
+      
+      // Erreurs pouvant être levée par les fonctions BITCOIN.
+      // renvoyée par ErreurInfo()
+      CONSTANT
+      	ERR_BITCOIN_BADADRESS 		  = 60 
+      	ERR_BITCOIN_RPC		 	      = 61
+      	ERR_BITCOIN_NOTENOUGHTBTC     = 62 // pas assez de fond dans le portefeuille
+      	ERR_BITCOIN_FILE	 		  = 64 // erreur de lecture/ecriture du fichier de portefeuille
+      	ERR_BITCOIN_SIGNATURE 		  = 65 // impossible de signer un utxo
+      	ERR_BITCOIN_RAW				  = 66 // erreur du protocle raw
+      	ERR_BITCOIN_BADBLOCK		  = 66 // erreur bas niveau (block invalide selon le consensus)
+      	ERR_BITCOIN_NOBLOCK			  = 67 // base locale vide
+      	ERR_BITCOIN_TODO			  = 68 // fonctionnalité non implémenté 
+      	ERR_BITCOIN_BADCONSTANT		  = 69 // constante invalide
+      	ERR_BITCOIN_BDD				  = 70 // erreur de la base de données locale
+      	ERR_BITCOIN_PASDEPORTEFEUILLE = 71 // aucun portefeuille
+      	ERR_BITCOIN_CONSENSUS		  = 72 // règle du consensus non respectée
+      	ERR_BITCOIN_LIB				  = 866 // erreur générale de la librairie
+      fin
+      
+      // structure renvoyée par bitcoinEnvoiePayement()
+      STTransactionEnvoyée est une structure
+      	hash	est uuid sur 256 		// ID de la transaction. ex : "f7bd6e424d979b8dc397ac1e459140aaa52d3f906145905b4167993a191c7536"
+      	montant est btcMontant  // Montant total de la transaction (=aves les frais)
+      	frais	est btcMontant 	// frais de transactions
+      	dest	est Adresse		// Adresse bitcoin du destinaitaire. ex "mwhoLcLqW3SnhJfnKhLvTzRLAQjewFxns1"
+      	rawTransaction est Buffer // transaction envoyée
+      fin
+      
+      // structure renvoyée par bitcoinCréeFacture
+      STFactureBtc est une structure
+      	dest 	  est Adresse	 // Adresse bitcoin ou envoyer les fonds.
+      	montant   est btcMontant // montant demandé. si 0 génère juste une adresse
+      	reference est chaine	 // libellé libre pour référence
+      	uri		  est chaine	 // url ou un qr code selon le BIP 021. ex :  "bitcoin:175tWpb8K1S7NmH4Zx6rewF9WQrcZv245W?amount=20.3&label=Luke-Jr" ou "175tWpb8K1S7NmH4Zx6rewF9WQrcZv245W"
+      fin
+      
+      
+      // valeurs pour BitcoinLitParamètre
+      constant 
+      	btcParamRéseau 		 = 1 
+      	btcNomPortefeuille   = 2
+      	btcHauteurMaxBloc    = 3
+      	btcImagePortefeuille = 4
+      	btcTransactionNonConfirmé	= 5
+      	
+      
+      fin
+      
+      // type d'objet dans les messages inv
+      CONSTANT
+      	MSG_TX 	 		 	= 1
+      	MSG_BLOCK			= 2
+      	MSG_FILTERED_BLOCK 	= 3
+      	MSG_CMPCT_BLOCK	 	= 4
+      fin
+      //global
+      //	 hash_zero est hash256
+      
+      //// valeurs des hash racine
+      //constant
+      //  	sGenesis_MainNet  = "000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F"
+      //  	sGenesis_TestNet3 = "000000000933EA01AD0EE984209779BAAEC3CED90FA3F408719526F8D77F4943"
+      // 	sGenesis_SimNet   = "683E86BD5C6D110D91B94B97137BA6BFE02DBBDB8E3DFF722A669B5D69D77AF6"
+      //
+      //	// difficulté du bloc genesis
+      //	bits_genesisbloc = 0x1d00ffff  
+      // fin
+      
+      FormaJSON est une énumération
+      	jsonRPC   = 1 // format JSON RPC
+      	jsonNatif = 2 // format natif réseau
+      fin
+      
+      	
+     type : 720896
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : ProcéduresGlobales1
+resources :
+ string_res :
+  identifier : 0x1a83e53f021256c4
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

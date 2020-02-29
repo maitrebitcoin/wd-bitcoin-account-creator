@@ -1,0 +1,74 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : IDJeton
+ major_version : 25
+ minor_version : 0
+ type : 4
+ description : ""
+ subtype : 0
+class :
+ identifier : 0x1b2f2f370a930626
+ internal_properties : BQAAAAUAAAB2/vstTMCJbS/hlxjFxirSqKvCUuv8YxgpWyl7S3iA
+ code_elements :
+  type_code : 10
+  p_codes :
+   -
+     code : |1+
+      // identifiant d'un jeton 
+      // c'est une sortie de transaction.
+      IDJeton est une Classe
+      	hashTxSortie 	est hash256  	// id de la transaction qui a crée le jeton 
+      	index 			est entier  	// n° de la sortie dans cette transaction. commence a 0
+      FIN
+     type : 131072
+  procedures :
+   -
+     name : Constructeur
+     procedure_id : 1958836276376634918
+     type_code : 27
+     code : |1+
+      PROCEDURE Constructeur()
+      
+     type : 589824
+   -
+     name : Destructeur
+     procedure_id : 1958836276376700454
+     type_code : 28
+     code : |1+
+      PROCEDURE Destructeur()
+     type : 655360
+   -
+     name : estEgalA
+     procedure_id : 1958842087538141686
+     type_code : 12
+     code : |1+
+      // inidque si on est le meme ID que <autreJeton>
+      PROCÉDURE estEgalA( autreIDJeton est IDjeton )
+      
+      SI autreIDJeton.hashTxSortie.m_h = hashTxSortie.m_h _ET_ autreIDJeton.index=index ALORS
+      	RENVOYER Vrai
+      FIN
+      // différents
+      renvoyer faux
+     type : 458752
+   -
+     name : versChaine
+     procedure_id : 2054220805646837570
+     type_code : 12
+     code : |1-
+      procédure versChaine() : chaîne
+      
+      renvoyer hashTxSortie.toString() + ":" + index
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : Classe1
+resources :
+ string_res :
+  identifier : 0x1b2f2f200a90abf0
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

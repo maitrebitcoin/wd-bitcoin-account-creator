@@ -1,0 +1,69 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : étapesDidactiques
+ major_version : 25
+ minor_version : 0
+ type : 7
+ description : ""
+ subtype : 0
+procedure_set :
+ identifier : 0x1d9c27e71c6b4bd5
+ internal_properties : BQAAAAUAAABGLu41kG7fjQV3iS4F72qmnKaNh5694reolNKIW0iw
+ code_elements :
+  type_code : 31
+  p_codes :
+   -
+     code : |1-
+      
+      // étapes de création d"un compte
+      EtapeCreationCompte est une Enumération
+      	etape_BufferAléatoire 		    = 1
+      	etape_PhraseBip39     		    = 2
+      	etape_GraineBip32     		    = 3
+      	etape_CléPrivééRacineBip32      = 4
+      	etape_CléPubliqueRacineBip32    = 5
+      	etape_CléPubliqueDérivééBip32   = 6
+      	etape_CléAdressePubliqueBrute   = 7
+      	etape_CléAdressePubliqueBech32  = 8
+      	etape_CléAdressePubliqueLegacy  = 9 // si pas mode bech32.
+      FIN
+      gTabLibelleEtape est un tableau de chaîne = [ ...
+      	"buffer de %1 bits aléatoires"						  +RC+ "Appel du générateur de nombre aléatoires", //1
+      	"phrase au format bip 39"							  +RC+ "Découpage de <buffer> en blocs de 11 bits", //2
+      	"graine dérivée de <phrase>" 				   	      +RC+ "PBKDF2(HA_HMAC_SHA_512,<phrase>,2048,64,'mnemonic'+<pass>)", // 3
+      	"clé privée racine + extra dérivée de <graine>"       +RC+ "HashChaîne( HA_HMAC_SHA_512,<graine>, 'Bitcoin seed')", // 4
+      	"clé publique racine + extra dérivé de <clé privée>"  +RC+ "ECDSA_MultipliePointGen(<clé orivée>)", // 5
+      	"clé publique n° 1"									  +RC+ "Dérivation BIP32 de <clé publique racine> sur [%1]", // 6
+      	"adresse publique n°1 brut"						  	  +RC+ "Ripedm160(sha256(<2 ou 3>+<clé publique n°1>.x))", // 7
+      	"adresse publique n°1 formatée" 		 			  +RC+ "Encodage au format bech32 de <adresse publique n°1 brute>", //8
+      	"adresse publique n°1 formatée" 		 			  +RC+ "Encodage en base 58 de <adresse publique n°1 brute>" //9 = etape_CléAdressePubliqueLegacy
+      ]
+     type : 720896
+   -
+     code : |1-
+      
+     type : 720898
+  procedures :
+   -
+     name : getDescriptionEtape
+     procedure_id : 2133626198544836520
+     type_code : 15
+     code : |1+
+      procédure getDescriptionEtape ( etape est EtapeCreationCompte ) : chaine
+      
+      nNumEtape est entier = etape..Valeur
+      renvoyer gTabLibelleEtape[ nNumEtape ]
+      
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  original_name : ProcéduresGlobales1
+resources :
+ string_res :
+  identifier : 0x1d9c27d41c6900f1
+  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+custom_note :
+ internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ
