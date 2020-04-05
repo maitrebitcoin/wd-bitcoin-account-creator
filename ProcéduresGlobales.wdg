@@ -21,16 +21,16 @@ procedure_set :
      code : |1+
       PROCEDURE SauveParam()
       
-      SauveParamètre("securité",    gParamApp.securité..Valeur )
-      SauveParamètre("tailleGraine",gParamApp.taillGraine..Valeur )
-      SauveParamètre("entropie",    gParamApp.entropie..Valeur )
-      SauveParamètre("testNet",     gParamApp.bTestNet )
-      SauveParamètre("langueBip39", gParamApp.langueBip39 )
-      SauveParamètre("typeAddr",    gParamApp.typeAddr..valeur  )
-      SauveParamètre("motdepasse",  gParamApp.bAvecMotDePasse  )
-      SauveParamètre("nomimagefond",gParamApp.sNomComplet  )
-      SauveParamètre("typeimage",   gParamApp.typeImage..Valeur  )
-      SauveParamètre("log",  		  gParamApp.bLogEtapes  )
+      monSauveParamètre("securité",    gParamApp.securité..Valeur )
+      monSauveParamètre("tailleGraine",gParamApp.taillGraine..Valeur )
+      monSauveParamètre("entropie",    gParamApp.entropie..Valeur )
+      monSauveParamètre("testNet",     gParamApp.bTestNet )
+      monSauveParamètre("langueBip39", gParamApp.langueBip39 )
+      monSauveParamètre("typeAddr",    gParamApp.typeAddr..valeur  )
+      monSauveParamètre("motdepasse",  gParamApp.bAvecMotDePasse  )
+      monSauveParamètre("nomimagefond",gParamApp.sNomComplet  )
+      monSauveParamètre("typeimage",   gParamApp.typeImage..Valeur  )
+      monSauveParamètre("log",  		  gParamApp.bLogEtapes  )
      type : 458752
    -
      name : ChargeParam
@@ -41,16 +41,16 @@ procedure_set :
       PROCEDURE ChargeParam()
       
       
-      gParamApp.securité     	  = EnumérationDepuisValeur( NiveauSécurité, ChargeParamètre("securité",      0 ))
-      gParamApp.taillGraine  	  = EnumérationDepuisValeur( TailleGraine,   ChargeParamètre("TailleGraine",  0 ))
-      gParamApp.entropie	   	  = EnumérationDepuisValeur( SourceEntropie, ChargeParamètre("entropie",      1 ))
-      gParamApp.bTestNet	   	  = ChargeParamètre("testNet",      0 )
-      gParamApp.langueBip39  	  = ChargeParamètre("langueBip39",  nationAnglais )
-      gParamApp.typeAddr	   	  = EnumérationDepuisValeur( PortefeuilleHDBip32::typeDérivation, ChargeParamètre("typeAddr",      3 ))
-      gParamApp.bAvecMotDePasse = ChargeParamètre("motdepasse",   0 )
-      gParamApp.sNomComplet     = ChargeParamètre("nomimagefond",   "" )
-      gParamApp.typeImage       = EnumérationDepuisValeur( typeImageFond, ChargeParamètre("typeimage",      0 ))
-      gParamApp.bLogEtapes      = ChargeParamètre("log",   0 )
+      gParamApp.securité     	  = EnumérationDepuisValeur( NiveauSécurité, monChargParamètre("securité",      0 ))
+      gParamApp.taillGraine  	  = EnumérationDepuisValeur( TailleGraine,   monChargParamètre("TailleGraine",  0 ))
+      gParamApp.entropie	   	  = EnumérationDepuisValeur( SourceEntropie, monChargParamètre("entropie",      1 ))
+      gParamApp.bTestNet	   	  = monChargParamètre("testNet",      0 )
+      gParamApp.langueBip39  	  = monChargParamètre("langueBip39",  nationAnglais )
+      gParamApp.typeAddr	   	  = EnumérationDepuisValeur( PortefeuilleHDBip32::typeDérivation, monChargParamètre("typeAddr",      3 ))
+      gParamApp.bAvecMotDePasse = monChargParamètre("motdepasse",   0 )
+      gParamApp.sNomComplet     = monChargParamètre("nomimagefond",   "" )
+      gParamApp.typeImage       = EnumérationDepuisValeur( typeImageFond, monChargParamètre("typeimage",      0 ))
+      gParamApp.bLogEtapes      = monChargParamètre("log",   "0" ) = "1"
       
      type : 458752
    -
@@ -162,6 +162,34 @@ procedure_set :
       // succes
       renvoyer (vrai, nouveauPortefeuille, "")
       
+     type : 458752
+   -
+     name : monSauveParamètre
+     procedure_id : 2200456069548718834
+     type_code : 15
+     code : |1-
+      PROCEDURE monSauveParamètre( clé chaine, local valeur chaine )
+      
+      <COMPILE SI Configuration<>"Exécutable Linux 64 bits">
+      	SauveParamètre(clé, valeur)
+      <SINON>
+      	INIEcrit("MAIN",clé,valeur,"param.conf" )
+      <fIN>
+      
+      	
+     type : 458752
+   -
+     name : monChargParamètre
+     procedure_id : 2200456511930387551
+     type_code : 15
+     code : |1-
+      procédure monChargParamètre( clé chaine, local valeurPArdéfaut chaine="" ) : chaine
+      
+      <COMPILE SI Configuration<>"Exécutable Linux 64 bits">
+      	renvoyer ChargeParamètre(clé, valeurPArdéfaut)
+      <SINON>
+      	renvoyer INILit("MAIN",clé,valeurPArdéfaut,"param.conf" )
+      <FIN>
      type : 458752
   procedure_templates : []
   property_templates : []

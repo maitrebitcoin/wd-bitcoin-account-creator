@@ -103,9 +103,11 @@ class :
       QUAND EXCEPTION
       	renvoyer faux // pb de requete http
       FIN
+      <COMPILE SI Configuration<>"Exécutable Linux 64 bits">
       si pas InternetConnecté() ALORS
       	RENVOYER Faux // pas de requete http possible
       FIN
+      <FIN>
       
       nNbOctet est un entier = nbBit/8
       requêteHasard est un httpRequête
