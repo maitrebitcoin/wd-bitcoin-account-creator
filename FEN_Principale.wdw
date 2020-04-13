@@ -790,6 +790,11 @@ window :
          	snomUtilisateur = RéseauUtilisateur()
          <sinon>
          	snomUtilisateur = SysEnvironnement ("USERNAME")
+         	// supprimer "USERNAME =" de la chaine récupérée
+         	snomUtilisateur = remplace(snomUtilisateur,"USERNAME=","")                                                         
+         	si snomUtilisateur="" alors
+         		snomUtilisateur = "bob"
+         	FIN
          <FIN>
          
          MoiMême = ChaîneConstruit(<§$0011§>, snomUtilisateur ) 
@@ -2267,6 +2272,7 @@ window :
       // pour tracer les étapes
       FLOG..Visible = Faux
       BTN_Suivant..Visible 	 = faux
+      BTN_Suivant..y		 	 = -4000 // contournement pour linux
       FLOG.InitLog()
       	
       	PROCÉDURE INTERNE _PLOGTread( FI_LOG,  etape , résultat est chaine, *  )
@@ -2314,8 +2320,9 @@ window :
       FIN
       
       SI gParamApp.bLogEtapes ALORS
-      	// on afffiche le bouton suivant et on attends pour que l'utilisateur puisse voir/copier les étapes
+      	// on affiche le bouton suivant et on attends pour que l'utilisateur puisse voir/copier les étapes
       	BTN_Suivant..Visible = vrai
+      	BTN_Suivant..Y		 = BTN_Suivant..YInitial
       	Jauge_CreationCompte..Visible = Faux
       	retour
       	
@@ -2689,8 +2696,11 @@ window :
       //StyleFond..Couleur..Opacité = 100
       <COMPILE SI Configuration<>"Exécutable Linux 64 bits">
       	imgTemp.DessineCadre(Rect,StyleCadre,StyleFond)
+      <sinon>
+      	dStylo(imgTemp, StyleCadre.Couleur, 0, StyleCadre.Epaisseur )
+      	dRectangle(imgTemp,Rect.x,  Rect.Y, Rect.X+Rect..Largeur, Rect.y+Rect.hauteur	)
       <fin>
-      
+      dStylo(imgTemp, noir)
       
       
       // récup partie privée 
