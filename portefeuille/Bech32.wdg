@@ -2,14 +2,14 @@
 #Internal properties refer to the properties of controls in windows, reports, etc.
 info :
  name : Bech32
- major_version : 25
+ major_version : 26
  minor_version : 0
  type : 7
  description : ""
  subtype : 0
 procedure_set :
  identifier : 0x1cf3796b092d61eb
- internal_properties : BQAAAAUAAABGLu41kG7fjQV3iS4F72qmnKaNh5694reolNKIW0iw
+ internal_properties : BgAAAAYAAABGLu41kG7fjQV3iS4F72qmnKaNh5694reolNKIW0iw
  code_elements :
   type_code : 31
   p_codes :
@@ -681,12 +681,12 @@ procedure_set :
   procedure_templates : []
   property_templates : []
  code_parameters :
-  internal_properties : BQAAAAUAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
+  internal_properties : BgAAAAYAAAA6ih3UbgNXHwTtiPSFUEj+2fi/m7v4QV2rqidAupM=
   original_name : ProcéduresGlobales1
 resources :
  string_res :
   identifier : 0x1cefe3cc0393f81e
-  internal_properties : BQAAAAUAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
+  internal_properties : BgAAAAYAAAAnMYFQ1bL/vz9ehh7L22SNNSlIzGTOI8h5F/WtgDNP
   strings :
    -
      text :
@@ -794,4 +794,4 @@ resources :
       ar-SA : "format invalide : mauvais nombre de caractères"
      index : 14
 custom_note :
- internal_properties : BQAAAAUAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ
+ internal_properties : BgAAAAYAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ
